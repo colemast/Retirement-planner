@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retirement Planner (UK)</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page:           #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --success:        #006300;
+
+    --series-1: #2a78d6; /* blue - Person A / household */
+    --series-2: #eb6834; /* orange - Person B */
+    --series-3: #1baf7a; /* aqua - real terms */
+    --series-4: #eda100; /* yellow */
+    --series-5: #e87ba4; /* magenta */
+    --series-6: #008300; /* green */
+    --series-7: #4a3aa7; /* violet */
+    --series-8: #e34948; /* red */
+
+    --status-good: #0ca30c;
+    --status-warning: #fab219;
+    --status-serious: #ec835a;
+    --status-critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page:           #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --success:        #0ca30c;
+      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+      --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page:           #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --success:        #0ca30c;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--page); color: var(--text-primary); }
+  .app { max-width: 1080px; margin: 0 auto; padding: 24px 20px 80px; }
+  header.top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 20px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; }
+  .sub { color: var(--text-secondary); font-size: 14px; margin-top:2px; }
+  .toolbar { display:flex; gap:8px; flex-wrap: wrap; }
+  button, .btn { font: inherit; cursor: pointer; border-radius: 8px; padding: 8px 14px; font-size: 13px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); }
+  button.primary { background: var(--series-1); color: #fff; border-color: transparent; }
+  button:hover { filter: brightness(0.97); }
+  button.primary:hover { filter: brightness(1.08); }
+
+  nav.tabs { display:flex; flex-wrap: wrap; gap:4px; margin: 18px 0; border-bottom: 1px solid var(--gridline); }
+  nav.tabs button { border: none; background: none; border-radius: 0; padding: 10px 14px; min-height: 44px; display:flex; align-items:center; color: var(--text-secondary); border-bottom: 2px solid transparent; white-space:nowrap; touch-action: manipulation; }
+  nav.tabs button.active { color: var(--text-primary); border-bottom-color: var(--series-1); font-weight: 600; }
+
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 15px; margin: 0 0 14px; }
+  .card h3 { font-size: 13px; color: var(--text-secondary); margin: 0 0 10px; font-weight: 600; }
+
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .grid.compact { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  label.field { display:flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-secondary); }
+  label.field input, label.field select { font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--gridline); background: var(--page); color: var(--text-primary); }
+  label.field input:focus, label.field select:focus { outline: 2px solid var(--series-1); outline-offset: 1px; }
+  .hint { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .note-warning { font-size: 12px; color: #9a6a00; margin-top: 4px; }
+  .note-critical { font-size: 12px; color: var(--status-critical); margin-top: 4px; }
+
+  .two-col { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+  .person-card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .person-title { display:flex; align-items:center; gap:8px; font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .badge-dot { width:10px; height:10px; border-radius:50%; flex:none; }
+
+  .stat-row { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat-tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .stat-tile .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .stat-tile .value { font-size: 22px; font-weight: 600; font-variant-numeric: proportional-nums; }
+  .stat-tile .value.good { color: var(--status-good); }
+  .stat-tile .value.warning { color: #9a6a00; }
+  .stat-tile .value.critical { color: var(--status-critical); }
+  .stat-tile .foot { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  .chart-wrap { position: relative; height: 300px; }
+  .chart-wrap canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+  .chart-legend { display:flex; gap: 16px; justify-content: flex-end; margin-bottom: 6px; flex-wrap: wrap; }
+  .chart-legend .item { display:flex; align-items:center; gap:6px; font-size: 12px; color: var(--text-secondary); }
+  .chart-legend .swatch { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+  .chart-legend .swatch.dash { border-radius: 2px; background-image: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px); background-color: transparent !important; height: 2px; align-self:center; }
+  .chart-tooltip { position: absolute; top: 0; left: 0; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; color: var(--text-primary); box-shadow: 0 4px 14px rgba(0,0,0,0.12); opacity: 0; transform: translate(-9999px,-9999px); transition: opacity 0.08s; white-space: nowrap; z-index: 5; }
+  .chart-tooltip .tt-title { font-weight: 600; margin-bottom: 4px; color: var(--text-secondary); }
+  .chart-tooltip .tt-row { display:flex; align-items:center; gap: 6px; }
+  .chart-tooltip .tt-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+  .sr-table { width:100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+  .sr-table th, .sr-table td { text-align:left; padding: 4px 8px; border-bottom: 1px solid var(--gridline); color: var(--text-secondary); white-space:nowrap; }
+  .table-scroll { overflow-x:auto; }
+  details.table-toggle { margin-top: 10px; }
+  details.table-toggle summary { font-size: 12px; color: var(--series-1); cursor: pointer; }
+
+  table.rows { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.rows th { text-align: left; font-weight: 600; color: var(--text-secondary); font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--gridline); }
+  table.rows td { padding: 6px 8px; border-bottom: 1px solid var(--gridline); }
+  table.rows td input { width: 100%; font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--gridline); background: var(--page); color: var(--text-primary); }
+  table.rows .rm { background:none; border:none; color: var(--text-muted); cursor:pointer; font-size:16px; padding:2px 8px; }
+  table.rows .rm:hover { color: var(--status-critical); }
+  .row-add { margin-top: 8px; }
+
+  .banner { border-radius: 10px; padding: 12px 14px; font-size: 13px; display:flex; gap:10px; align-items:flex-start; margin-bottom: 16px; }
+  .banner.good { background: color-mix(in srgb, var(--status-good) 12%, var(--surface-1)); border: 1px solid color-mix(in srgb, var(--status-good) 35%, transparent); }
+  .banner.warning { background: color-mix(in srgb, var(--status-warning) 16%, var(--surface-1)); border: 1px solid color-mix(in srgb, var(--status-warning) 40%, transparent); }
+  .banner.critical { background: color-mix(in srgb, var(--status-critical) 12%, var(--surface-1)); border: 1px solid color-mix(in srgb, var(--status-critical) 35%, transparent); }
+  .banner strong { display:block; margin-bottom: 2px; }
+
+  .legend-note { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+  .checkbox-field { display:flex; align-items:center; gap:8px; font-size: 13px; color: var(--text-secondary); }
+  footer.note { font-size: 12px; color: var(--text-muted); margin-top: 30px; line-height:1.6; }
+  a { color: var(--series-1); }
+  .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="top">
+    <div>
+      <h1>Retirement Planner</h1>
+      <div class="sub">UK tax rules, built for two. Nothing leaves your browser.</div>
+    </div>
+    <div class="toolbar">
+      <input type="file" id="importFile" accept="application/json" class="visually-hidden">
+      <button id="importBtn">Load plan…</button>
+      <button id="exportBtn" class="primary">Save plan</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="overview" class="active">Overview</button>
+    <button data-tab="budget">Budget</button>
+    <button data-tab="drawdown">Drawdown</button>
+    <button data-tab="montecarlo">Monte Carlo</button>
+  </nav>
+
+  <!-- OVERVIEW -->
+  <section class="panel active" id="panel-overview">
+    <div class="card">
+      <h2>Shared assumptions</h2>
+      <div class="grid">
+        <label class="field">Expected annual return, pre-retirement (%)
+          <input type="number" id="returnPre" min="-20" max="20" step="0.1" value="6.5">
+        </label>
+        <label class="field">Expected annual return, in retirement (%)
+          <input type="number" id="returnPost" min="-20" max="20" step="0.1" value="4.5">
+        </label>
+        <label class="field">Assumed inflation (%)
+          <input type="number" id="inflation" min="0" max="15" step="0.1" value="2.8">
+        </label>
+      </div>
+      <div class="hint" style="margin-top:10px;">Salaries and pension contributions are held flat at today's amounts throughout — a simplifying assumption.</div>
+    </div>
+
+    <div class="two-col" id="peopleGrid"></div>
+
+    <div class="stat-row" id="overviewStats"></div>
+
+    <div class="card">
+      <h2>Projected household pension savings</h2>
+      <div class="chart-legend" id="projectionLegend"></div>
+      <div class="chart-wrap">
+        <canvas id="projectionChart"></canvas>
+        <div class="chart-tooltip" id="projectionTooltip"></div>
+      </div>
+      <div class="legend-note">Nominal = future £. Today's £ = adjusted for assumed inflation. Chart runs until the later of your two chosen retirement ages.</div>
+      <details class="table-toggle"><summary>View as table</summary>
+        <div class="table-scroll"><table class="sr-table" id="projectionTable"><thead><tr><th>Year</th><th id="projTableHeadA">You (age)</th><th id="projTableHeadB">Spouse (age)</th><th>Household nominal</th><th>Household today's £</th></tr></thead><tbody></tbody></table></div>
+      </details>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary style="cursor:pointer; font-size:14px; font-weight:600;">UK tax assumptions (2026/27 tax year)</summary>
+        <div class="hint" style="margin:10px 0;">England, Wales &amp; Northern Ireland Income Tax rates. Figures are current published rates and allowances — edit them here if rules change in a future Budget. This is a simplified model, not tax advice.</div>
+        <div class="grid compact">
+          <label class="field">Personal Allowance (£)
+            <input type="number" id="taxPA" min="0" step="10" value="12570">
+          </label>
+          <label class="field">Higher rate threshold (£)
+            <input type="number" id="taxHigherThreshold" min="0" step="10" value="50270">
+          </label>
+          <label class="field">Additional rate threshold (£)
+            <input type="number" id="taxAdditionalThreshold" min="0" step="10" value="125140">
+          </label>
+          <label class="field">Personal Allowance taper starts (£)
+            <input type="number" id="taxPATaperStart" min="0" step="1000" value="100000">
+          </label>
+          <label class="field">Pension annual allowance (£)
+            <input type="number" id="taxAA" min="0" step="1000" value="60000">
+          </label>
+          <label class="field">AA taper: threshold income (£)
+            <input type="number" id="taxAAThresholdIncome" min="0" step="1000" value="200000">
+          </label>
+          <label class="field">AA taper: adjusted income (£)
+            <input type="number" id="taxAAAdjustedIncome" min="0" step="1000" value="260000">
+          </label>
+          <label class="field">AA taper floor (£)
+            <input type="number" id="taxAAFloor" min="0" step="1000" value="10000">
+          </label>
+          <label class="field">Pension lump sum allowance (£)
+            <input type="number" id="taxLSA" min="0" step="1000" value="268275">
+          </label>
+          <label class="field">Marriage Allowance transfer (£)
+            <input type="number" id="taxMarriageAmount" min="0" step="10" value="1260">
+          </label>
+        </div>
+        <label class="checkbox-field" style="margin-top:12px;">
+          <input type="checkbox" id="useMarriageAllowance" checked>
+          Automatically apply Marriage Allowance when beneficial (transfers £1,260 of Personal Allowance to a basic-rate spouse when the other has little or no income)
+        </label>
+      </details>
+    </div>
+  </section>
+
+  <!-- BUDGET -->
+  <section class="panel" id="panel-budget">
+    <div class="card">
+      <h2>Monthly household income &amp; expenses</h2>
+      <div class="grid" style="margin-bottom:16px;">
+        <label class="field">Your monthly take-home pay (£)
+          <input type="number" id="incomeA" min="0" step="50" value="2800">
+        </label>
+        <label class="field">Spouse's monthly take-home pay (£)
+          <input type="number" id="incomeB" min="0" step="50" value="2000">
+        </label>
+      </div>
+      <h3>Expense categories</h3>
+      <table class="rows" id="expenseTable">
+        <thead><tr><th style="width:60%">Category</th><th>Monthly (£)</th><th></th></tr></thead>
+        <tbody id="expenseBody"></tbody>
+      </table>
+      <button class="row-add" id="addExpenseBtn">+ Add category</button>
+    </div>
+
+    <div class="stat-row" id="budgetStats"></div>
+
+    <div class="card">
+      <h2>Where your money goes</h2>
+      <div class="chart-wrap" id="budgetChartWrap">
+        <canvas id="budgetChart"></canvas>
+        <div class="chart-tooltip" id="budgetTooltip"></div>
+      </div>
+      <details class="table-toggle"><summary>View as table</summary>
+        <table class="sr-table" id="budgetTable"><thead><tr><th>Category</th><th>Monthly</th></tr></thead><tbody></tbody></table>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>Apply this to your plan</h2>
+      <label class="checkbox-field">
+        <input type="checkbox" id="useSurplus">
+        Split my monthly surplus (income − expenses) 50/50 into each of your pension contributions on the Overview tab
+      </label>
+    </div>
+  </section>
+
+  <!-- DRAWDOWN -->
+  <section class="panel" id="panel-drawdown">
+    <div class="card">
+      <h2>Spending in retirement</h2>
+      <div class="grid">
+        <label class="field">Desired household net spending in retirement (£/yr, today's £, after tax)
+          <input type="number" id="retirementSpending" min="0" step="500" value="32000">
+        </label>
+      </div>
+      <div class="hint" style="margin-top:10px;">
+        We assume you both start drawing retirement income together from the <strong>later</strong> of your two retirement ages, and plan through to the <strong>later</strong> of your two life expectancies. Each of you takes a 25% tax-free lump sum at that point (up to the pension lump sum allowance); the rest of each pot is drawn down and taxed as income under your own Personal Allowance and bands — split evenly to meet the household target, with Marriage Allowance applied automatically where you've enabled it.
+      </div>
+    </div>
+
+    <div id="drawdownBanner"></div>
+
+    <div class="stat-row" id="drawdownStats"></div>
+
+    <div class="card">
+      <h2>Household balance through retirement</h2>
+      <div class="chart-wrap">
+        <canvas id="drawdownChart"></canvas>
+        <div class="chart-tooltip" id="drawdownTooltip"></div>
+      </div>
+      <details class="table-toggle"><summary>View as table</summary>
+        <div class="table-scroll"><table class="sr-table" id="drawdownTable"><thead><tr>
+          <th>Year</th><th>You (age)</th><th>Your gross w/d</th><th>Your tax</th>
+          <th>Spouse (age)</th><th>Spouse gross w/d</th><th>Spouse tax</th>
+          <th>Household net</th><th>Household balance</th>
+        </tr></thead><tbody></tbody></table></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- MONTE CARLO -->
+  <section class="panel" id="panel-montecarlo">
+    <div class="card">
+      <h2>Simulation settings</h2>
+      <div class="hint" style="margin-bottom:12px;">
+        Instead of a single fixed rate, each simulated year draws a random investment return and a random inflation rate from a normal distribution around your expected values (set on the Overview tab). This shows a spread of possible outcomes rather than one estimate. We assume no correlation between returns and inflation, and each year is independent of the last — real markets have more structure than this.
+      </div>
+      <div class="grid">
+        <label class="field">Pre-retirement return volatility (%, std. dev.)
+          <input type="number" id="returnPreVol" min="0" max="40" step="0.5" value="12">
+        </label>
+        <label class="field">In-retirement return volatility (%, std. dev.)
+          <input type="number" id="returnPostVol" min="0" max="40" step="0.5" value="8">
+        </label>
+        <label class="field">Inflation volatility (%, std. dev.)
+          <input type="number" id="inflationVol" min="0" max="10" step="0.1" value="1.5">
+        </label>
+        <label class="field">Number of simulated runs
+          <input type="number" id="numSimulations" min="100" max="3000" step="100" value="500">
+        </label>
+      </div>
+      <button class="primary" id="runMcBtn" style="margin-top:14px;">Run simulation</button>
+      <span class="hint" id="mcStatus" style="margin-left:10px;"></span>
+    </div>
+
+    <div id="mcResults" style="display:none;">
+      <div class="stat-row" id="mcStats"></div>
+      <div class="card">
+        <h2>Household balance — range of simulated outcomes</h2>
+        <div class="chart-legend" id="mcLegend"></div>
+        <div class="chart-wrap">
+          <canvas id="mcChart"></canvas>
+          <div class="chart-tooltip" id="mcTooltip"></div>
+        </div>
+        <div class="legend-note">Shaded band = 10th–90th percentile of simulated household balances each year. Solid line = median simulated outcome. Dashed line = your deterministic estimate (fixed rates) from the other tabs, for comparison.</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="note">
+    This tool gives rough, educational estimates using simplified compounding and simplified UK Income Tax, pension annual allowance and Marriage Allowance rules (England, Wales &amp; Northern Ireland rates) — real tax law has more detail (National Insurance, student loans, benefits, Scottish rates, exact HMRC definitions of threshold/adjusted income, phased tax-free cash, and more). It isn't financial, tax, or legal advice. Consider speaking with a licensed financial adviser or accountant for decisions specific to your situation.
+    <br><br>Use <strong>Save plan</strong> to download your inputs as a file, and <strong>Load plan…</strong> to restore them next time you open this app — your data isn't stored anywhere automatically.
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var PEOPLE = ["a", "b"];
+  var PEOPLE_LABEL = { a: "You", b: "Spouse" };
+  var PEOPLE_COLOR = { a: "--series-1", b: "--series-2" };
+
+  // ---------- State ----------
+  var state = {
+    returnPre: 6.5, returnPost: 4.5, inflation: 2.8,
+    returnPreVol: 12, returnPostVol: 8, inflationVol: 1.5, numSimulations: 500,
+    people: {
+      a: { currentAge: 35, retirementAge: 65, statePensionAge: 67, lifeExpectancy: 90, currentSavings: 50000, annualSalary: 42000, monthlyContribution: 300, includeStatePension: true, statePensionAnnual: 12548, otherIncome: 0 },
+      b: { currentAge: 35, retirementAge: 65, statePensionAge: 67, lifeExpectancy: 90, currentSavings: 30000, annualSalary: 30000, monthlyContribution: 200, includeStatePension: true, statePensionAnnual: 12548, otherIncome: 0 }
+    },
+    incomeA: 2800, incomeB: 2000,
+    expenses: [
+      { name: "Housing", amount: 1400 },
+      { name: "Food", amount: 550 },
+      { name: "Transport", amount: 300 },
+      { name: "Insurance", amount: 200 },
+      { name: "Debt payments", amount: 200 },
+      { name: "Entertainment", amount: 200 },
+      { name: "Other", amount: 300 }
+    ],
+    useSurplus: false,
+    retirementSpending: 32000,
+    tax: {
+      personalAllowance: 12570, higherRateThreshold: 50270, additionalRateThreshold: 125140, paTaperStart: 100000,
+      pensionAnnualAllowance: 60000, aaThresholdIncome: 200000, aaAdjustedIncome: 260000, aaFloor: 10000,
+      lumpSumAllowance: 268275, marriageAllowanceAmount: 1260, useMarriageAllowance: true
+    }
+  };
+
+  var EXPENSE_COLORS = ["--series-1","--series-2","--series-3","--series-4","--series-5","--series-6","--series-7","--series-8"];
+  var CURRENT_YEAR = new Date().getFullYear();
+
+  function cssVar(name) {
+    return getComputedStyle(document.getElementById("app")).getPropertyValue(name).trim();
+  }
+  function fmtGBP(n, decimals) {
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    return n.toLocaleString("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: decimals || 0 });
+  }
+  function fmtGBPCompact(n) {
+    if (n === null || n === undefined || isNaN(n)) return "—";
+    var sign = n < 0 ? "-" : "";
+    n = Math.abs(n);
+    if (n >= 1000000) return sign + "£" + (n/1000000).toFixed(2) + "M";
+    if (n >= 1000) return sign + "£" + (n/1000).toFixed(0) + "k";
+    return sign + fmtGBP(n);
+  }
+
+  // ---------- UK tax engine ----------
+  function taperedPersonalAllowance(income, t) {
+    var reduction = Math.max(0, income - t.paTaperStart) / 2;
+    return Math.max(0, t.personalAllowance - reduction);
+  }
+  function ukIncomeTax(taxableIncome, personalAllowance, t) {
+    var pa = personalAllowance === undefined ? taperedPersonalAllowance(taxableIncome, t) : personalAllowance;
+    var income = Math.max(0, taxableIncome);
+    var tax = 0;
+    if (income > pa) tax += (Math.min(income, t.higherRateThreshold) - pa) * 0.20;
+    if (income > t.higherRateThreshold) tax += (Math.min(income, t.additionalRateThreshold) - t.higherRateThreshold) * 0.40;
+    if (income > t.additionalRateThreshold) tax += (income - t.additionalRateThreshold) * 0.45;
+    return Math.max(0, tax);
+  }
+  function marginalRate(income, t) {
+    if (income > t.additionalRateThreshold) return 0.45;
+    if (income > t.higherRateThreshold) return 0.40;
+    var pa = taperedPersonalAllowance(income, t);
+    if (income > pa) return 0.20;
+    return 0;
+  }
+  function taperedAnnualAllowance(adjustedIncome, t) {
+    if (adjustedIncome <= t.aaThresholdIncome || adjustedIncome <= t.aaAdjustedIncome) return t.pensionAnnualAllowance;
+    var reduction = (adjustedIncome - t.aaAdjustedIncome) / 2;
+    return Math.max(t.aaFloor, t.pensionAnnualAllowance - reduction);
+  }
+  // Solve gross withdrawal (on top of otherIncome) needed to hit a target net, via binary search.
+  function solveGrossForNet(otherIncome, targetNet, t, maxGross) {
+    function netFor(g) {
+      var total = otherIncome + g;
+      return total - ukIncomeTax(total, undefined, t);
+    }
+    if (maxGross <= 0) return 0;
+    if (netFor(maxGross) <= targetNet) return maxGross;
+    if (netFor(0) >= targetNet) return 0;
+    var lo = 0, hi = maxGross;
+    for (var i = 0; i < 40; i++) {
+      var mid = (lo + hi) / 2;
+      if (netFor(mid) < targetNet) lo = mid; else hi = mid;
+    }
+    return hi;
+  }
+  // Decide Marriage Allowance transfer for a year given each person's non-withdrawal income.
+  function marriageAllowancePAs(otherIncome, t) {
+    var pa = { a: t.personalAllowance, b: t.personalAllowance };
+    if (t.useMarriageAllowance) {
+      var transferor = otherIncome.a <= otherIncome.b ? "a" : "b";
+      var recipient = transferor === "a" ? "b" : "a";
+      if (otherIncome[transferor] <= (t.personalAllowance - t.marriageAllowanceAmount) && otherIncome[recipient] <= t.higherRateThreshold) {
+        pa[transferor] -= t.marriageAllowanceAmount;
+        pa[recipient] += t.marriageAllowanceAmount;
+      }
+    }
+    return pa;
+  }
+  // One drawdown year for both people, given current pots (mutated), other (non-withdrawal) income,
+  // the household net spending target for the year, and the return rate to apply. Shared by the
+  // deterministic engine and the Monte Carlo engine so the tax logic can never drift between them.
+  function drawdownYearStep(pot, t, targetNet, otherIncome, returnRate) {
+    var pa = marriageAllowancePAs(otherIncome, t);
+    var gross = {}, taxPaid = {}, net = {};
+    PEOPLE.forEach(function (p) {
+      var maxGross = Math.max(0, pot[p]);
+      var g = solveGrossForNet(otherIncome[p], targetNet / 2, { personalAllowance: pa[p], higherRateThreshold: t.higherRateThreshold, additionalRateThreshold: t.additionalRateThreshold, paTaperStart: t.paTaperStart }, maxGross);
+      var total = otherIncome[p] + g;
+      var tx = ukIncomeTax(total, pa[p], { higherRateThreshold: t.higherRateThreshold, additionalRateThreshold: t.additionalRateThreshold });
+      gross[p] = g; taxPaid[p] = tx; net[p] = total - tx;
+      pot[p] = Math.max(0, pot[p] * (1 + returnRate) - g);
+    });
+    return { gross: gross, tax: taxPaid, net: net };
+  }
+  // Box-Muller normal random sample.
+  function randomNormal(meanPct, stdevPct) {
+    if (stdevPct <= 0) return meanPct / 100;
+    var u1 = Math.random() || 1e-9, u2 = Math.random();
+    var z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    return (meanPct + stdevPct * z) / 100;
+  }
+
+  // ---------- Tabs ----------
+  var tabButtons = document.querySelectorAll("nav.tabs button");
+  tabButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      tabButtons.forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      document.querySelectorAll(".panel").forEach(function (p) { p.classList.remove("active"); });
+      document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+      renderAll();
+    });
+  });
+
+  // ---------- Person cards (built once) ----------
+  var peopleGrid = document.getElementById("peopleGrid");
+  PEOPLE.forEach(function (p) {
+    var label = PEOPLE_LABEL[p];
+    var card = document.createElement("div");
+    card.className = "person-card";
+    card.innerHTML =
+      '<div class="person-title"><span class="badge-dot" style="background:' + cssVar(PEOPLE_COLOR[p]) + '"></span>' + label + '</div>' +
+      '<div class="grid">' +
+        field("Current age", "currentAge_" + p, "number") +
+        field("Retirement age", "retirementAge_" + p, "number") +
+        field("State Pension age", "statePensionAge_" + p, "number") +
+        field("Life expectancy", "lifeExpectancy_" + p, "number") +
+        field("Current pension pot (£)", "currentSavings_" + p, "number") +
+        field("Gross annual salary (£)", "annualSalary_" + p, "number") +
+        field("Monthly pension contribution (£, from take-home pay)", "monthlyContribution_" + p, "number") +
+        field("Other retirement income (£/yr, today's £)", "otherIncome_" + p, "number") +
+      '</div>' +
+      '<label class="checkbox-field" style="margin-top:10px;"><input type="checkbox" id="includeStatePension_' + p + '" checked> Include State Pension from State Pension age</label>' +
+      '<div class="grid" style="margin-top:10px;">' +
+        field("State Pension (£/yr, today's £)", "statePensionAnnual_" + p, "number") +
+      '</div>' +
+      '<div class="note-warning" id="aaWarning_' + p + '" style="display:none;"></div>' +
+      '<div class="hint" id="reliefNote_' + p + '"></div>';
+    peopleGrid.appendChild(card);
+  });
+  function field(label, id, type) {
+    return '<label class="field">' + label + '<input type="' + type + '" id="' + id + '"></label>';
+  }
+
+  // ---------- Inputs wiring ----------
+  var sharedFields = ["returnPre", "returnPost", "inflation", "incomeA", "incomeB", "retirementSpending"];
+  sharedFields.forEach(function (id) {
+    var el = document.getElementById(id);
+    el.value = state[id];
+    el.addEventListener("input", function () { state[id] = parseFloat(el.value) || 0; renderAll(); });
+  });
+
+  var personNumberFields = ["currentAge","retirementAge","statePensionAge","lifeExpectancy","currentSavings","annualSalary","monthlyContribution","otherIncome","statePensionAnnual"];
+  PEOPLE.forEach(function (p) {
+    personNumberFields.forEach(function (f) {
+      var el = document.getElementById(f + "_" + p);
+      el.value = state.people[p][f];
+      el.addEventListener("input", function () { state.people[p][f] = parseFloat(el.value) || 0; renderAll(); });
+    });
+    var chk = document.getElementById("includeStatePension_" + p);
+    chk.checked = state.people[p].includeStatePension;
+    chk.addEventListener("change", function () { state.people[p].includeStatePension = chk.checked; renderAll(); });
+  });
+
+  var taxFieldMap = {
+    taxPA: "personalAllowance", taxHigherThreshold: "higherRateThreshold", taxAdditionalThreshold: "additionalRateThreshold",
+    taxPATaperStart: "paTaperStart", taxAA: "pensionAnnualAllowance", taxAAThresholdIncome: "aaThresholdIncome",
+    taxAAAdjustedIncome: "aaAdjustedIncome", taxAAFloor: "aaFloor", taxLSA: "lumpSumAllowance", taxMarriageAmount: "marriageAllowanceAmount"
+  };
+  Object.keys(taxFieldMap).forEach(function (id) {
+    var el = document.getElementById(id);
+    el.value = state.tax[taxFieldMap[id]];
+    el.addEventListener("input", function () { state.tax[taxFieldMap[id]] = parseFloat(el.value) || 0; renderAll(); });
+  });
+  var maEl = document.getElementById("useMarriageAllowance");
+  maEl.checked = state.tax.useMarriageAllowance;
+  maEl.addEventListener("change", function () { state.tax.useMarriageAllowance = maEl.checked; renderAll(); });
+
+  var mcFields = ["returnPreVol", "returnPostVol", "inflationVol", "numSimulations"];
+  mcFields.forEach(function (id) {
+    var el = document.getElementById(id);
+    el.value = state[id];
+    el.addEventListener("input", function () { state[id] = parseFloat(el.value) || 0; });
+  });
+
+  var useSurplusEl = document.getElementById("useSurplus");
+  useSurplusEl.addEventListener("change", function () {
+    state.useSurplus = useSurplusEl.checked;
+    PEOPLE.forEach(function (p) { document.getElementById("monthlyContribution_" + p).disabled = state.useSurplus; });
+    renderAll();
+  });
+
+  // ---------- Expense rows ----------
+  var expenseBody = document.getElementById("expenseBody");
+  function renderExpenseRows() {
+    expenseBody.innerHTML = "";
+    state.expenses.forEach(function (exp, idx) {
+      var tr = document.createElement("tr");
+
+      var tdName = document.createElement("td");
+      var nameInput = document.createElement("input");
+      nameInput.type = "text"; nameInput.value = exp.name;
+      nameInput.addEventListener("input", function () { exp.name = nameInput.value; renderAll(); });
+      tdName.appendChild(nameInput);
+
+      var tdAmt = document.createElement("td");
+      var amtInput = document.createElement("input");
+      amtInput.type = "number"; amtInput.min = "0"; amtInput.step = "10"; amtInput.value = exp.amount;
+      amtInput.addEventListener("input", function () { exp.amount = parseFloat(amtInput.value) || 0; renderAll(); });
+      tdAmt.appendChild(amtInput);
+
+      var tdRm = document.createElement("td");
+      var rmBtn = document.createElement("button");
+      rmBtn.className = "rm"; rmBtn.textContent = "✕"; rmBtn.title = "Remove category";
+      rmBtn.addEventListener("click", function () { state.expenses.splice(idx, 1); renderExpenseRows(); renderAll(); });
+      tdRm.appendChild(rmBtn);
+
+      tr.appendChild(tdName); tr.appendChild(tdAmt); tr.appendChild(tdRm);
+      expenseBody.appendChild(tr);
+    });
+  }
+  document.getElementById("addExpenseBtn").addEventListener("click", function () {
+    state.expenses.push({ name: "New category", amount: 0 });
+    renderExpenseRows();
+    renderAll();
+  });
+  renderExpenseRows();
+
+  // ---------- Calculations ----------
+  function computeBudget() {
+    var totalExpenses = state.expenses.reduce(function (s, e) { return s + (e.amount || 0); }, 0);
+    var householdIncome = state.incomeA + state.incomeB;
+    var surplus = householdIncome - totalExpenses;
+    return { totalExpenses: totalExpenses, householdIncome: householdIncome, surplus: surplus };
+  }
+  function effectiveMonthlyContribution(p) {
+    if (state.useSurplus) return Math.max(0, computeBudget().surplus) / 2;
+    return state.people[p].monthlyContribution;
+  }
+
+  function householdRetirementYear() {
+    var a = state.people.a, b = state.people.b;
+    return CURRENT_YEAR + Math.max(a.retirementAge - a.currentAge, b.retirementAge - b.currentAge);
+  }
+  function householdEndYear() {
+    var a = state.people.a, b = state.people.b;
+    return CURRENT_YEAR + Math.max(a.lifeExpectancy - a.currentAge, b.lifeExpectancy - b.currentAge);
+  }
+
+  function computeProjection() {
+    var retireYear = householdRetirementYear();
+    var years = Math.max(0, retireYear - CURRENT_YEAR);
+    var balances = { a: state.people.a.currentSavings, b: state.people.b.currentSavings };
+    var monthlyReturn = (state.returnPre / 100) / 12;
+    var series = [];
+    var row0 = { year: CURRENT_YEAR };
+    PEOPLE.forEach(function (p) { row0[p] = balances[p]; row0[p + "Real"] = balances[p]; row0.age = row0.age || {}; row0.age[p] = state.people[p].currentAge; });
+    series.push(row0);
+
+    for (var y = 1; y <= years; y++) {
+      PEOPLE.forEach(function (p) {
+        var person = state.people[p];
+        var stillAccumulating = (person.currentAge + y) <= person.retirementAge;
+        var monthlyContrib = stillAccumulating ? effectiveMonthlyContribution(p) / 0.8 : 0; // gross up 20% relief-at-source
+        for (var m = 0; m < 12; m++) {
+          balances[p] = balances[p] * (1 + monthlyReturn) + monthlyContrib;
+        }
+      });
+      var row = { year: CURRENT_YEAR + y, age: {} };
+      PEOPLE.forEach(function (p) {
+        row[p] = balances[p];
+        row[p + "Real"] = balances[p] / Math.pow(1 + state.inflation / 100, y);
+        row.age[p] = state.people[p].currentAge + y;
+      });
+      series.push(row);
+    }
+    return { series: series, endBalances: balances, retireYear: retireYear };
+  }
+
+  function annualAllowanceCheck(p) {
+    var person = state.people[p];
+    var t = state.tax;
+    var grossAnnual = (effectiveMonthlyContribution(p) / 0.8) * 12;
+    var aa = taperedAnnualAllowance(person.annualSalary, t);
+    return { grossAnnual: grossAnnual, aa: aa, exceeded: grossAnnual > aa };
+  }
+
+  function computeDrawdown(startBalances) {
+    var t = state.tax;
+    var retireYear = householdRetirementYear();
+    var endYear = householdEndYear();
+    var years = Math.max(0, endYear - retireYear);
+
+    // Apply 25% tax-free lump sum at household retirement start
+    var pot = {}, lumpSum = {};
+    PEOPLE.forEach(function (p) {
+      var full = startBalances[p];
+      var ls = Math.min(full * 0.25, t.lumpSumAllowance);
+      lumpSum[p] = ls;
+      pot[p] = full - ls;
+    });
+
+    var series = [];
+    var householdTarget = state.retirementSpending;
+    var householdBalance = pot.a + pot.b;
+    var depletedYear = null;
+    var row0 = { year: retireYear, age: {}, pot: { a: pot.a, b: pot.b }, gross: { a: 0, b: 0 }, tax: { a: 0, b: 0 }, net: { a: 0, b: 0 }, target: householdTarget, balance: householdBalance };
+    PEOPLE.forEach(function (p) { row0.age[p] = state.people[p].currentAge + (retireYear - CURRENT_YEAR); });
+    series.push(row0);
+
+    for (var y = 1; y <= years; y++) {
+      var yearsFromNow = (retireYear - CURRENT_YEAR) + y;
+      var inflFactor = Math.pow(1 + state.inflation / 100, yearsFromNow);
+      var targetNet = householdTarget * inflFactor;
+
+      var otherIncome = {};
+      PEOPLE.forEach(function (p) {
+        var person = state.people[p];
+        var age = person.currentAge + yearsFromNow;
+        var sp = (person.includeStatePension && age >= person.statePensionAge) ? person.statePensionAnnual * inflFactor : 0;
+        var other = person.otherIncome * inflFactor;
+        otherIncome[p] = sp + other;
+      });
+
+      var step = drawdownYearStep(pot, t, targetNet, otherIncome, state.returnPost / 100);
+
+      householdBalance = pot.a + pot.b;
+      if (householdBalance <= 0.5 && depletedYear === null) depletedYear = retireYear + y;
+
+      var row = { year: retireYear + y, age: {}, pot: { a: pot.a, b: pot.b }, gross: step.gross, tax: step.tax, net: step.net, target: targetNet, balance: householdBalance };
+      PEOPLE.forEach(function (p) { row.age[p] = state.people[p].currentAge + yearsFromNow; });
+      series.push(row);
+    }
+
+    return { series: series, depletedYear: depletedYear, lumpSum: lumpSum, retireYear: retireYear, endYear: endYear };
+  }
+
+  // ---------- Monte Carlo engine ----------
+  // Simulates one full random path (accumulation + drawdown, annual steps) and returns the
+  // household balance at every year plus whether the household ever ran out of money.
+  function simulateOnePath() {
+    var t = state.tax;
+    var retireYear = householdRetirementYear();
+    var endYear = householdEndYear();
+    var pot = { a: state.people.a.currentSavings, b: state.people.b.currentSavings };
+    var cumInfl = 1;
+    var balances = [pot.a + pot.b];
+    var survived = true;
+
+    for (var y = 1; y <= (endYear - CURRENT_YEAR); y++) {
+      var year = CURRENT_YEAR + y;
+      var infl = randomNormal(state.inflation, state.inflationVol);
+      infl = Math.max(-0.5, infl);
+      cumInfl *= (1 + infl);
+
+      if (year <= retireYear) {
+        var rPre = randomNormal(state.returnPre, state.returnPreVol);
+        rPre = Math.max(-0.9, rPre);
+        PEOPLE.forEach(function (p) {
+          var person = state.people[p];
+          var stillAccumulating = (person.currentAge + y) <= person.retirementAge;
+          var grossAnnual = stillAccumulating ? (effectiveMonthlyContribution(p) / 0.8) * 12 : 0;
+          pot[p] = pot[p] * (1 + rPre) + grossAnnual;
+        });
+        if (year === retireYear) {
+          PEOPLE.forEach(function (p) {
+            var ls = Math.min(pot[p] * 0.25, t.lumpSumAllowance);
+            pot[p] -= ls;
+          });
+        }
+      } else {
+        var rPost = randomNormal(state.returnPost, state.returnPostVol);
+        rPost = Math.max(-0.9, rPost);
+        var targetNet = state.retirementSpending * cumInfl;
+        var otherIncome = {};
+        PEOPLE.forEach(function (p) {
+          var person = state.people[p];
+          var age = person.currentAge + y;
+          var sp = (person.includeStatePension && age >= person.statePensionAge) ? person.statePensionAnnual * cumInfl : 0;
+          var other = person.otherIncome * cumInfl;
+          otherIncome[p] = sp + other;
+        });
+        drawdownYearStep(pot, t, targetNet, otherIncome, rPost);
+        if ((pot.a + pot.b) <= 0.5) survived = false;
+      }
+      balances.push(pot.a + pot.b);
+    }
+    return { balances: balances, survived: survived };
+  }
+
+  function percentile(sortedArr, p) {
+    var idx = (sortedArr.length - 1) * p;
+    var lo = Math.floor(idx), hi = Math.ceil(idx);
+    if (lo === hi) return sortedArr[lo];
+    return sortedArr[lo] + (sortedArr[hi] - sortedArr[lo]) * (idx - lo);
+  }
+
+  function runMonteCarlo(numSims) {
+    var endYear = householdEndYear();
+    var numYears = endYear - CURRENT_YEAR + 1;
+    var allBalances = []; // [run][yearIndex]
+    var successes = 0;
+    var endingBalances = [];
+    for (var i = 0; i < numSims; i++) {
+      var path = simulateOnePath();
+      allBalances.push(path.balances);
+      if (path.survived) successes++;
+      endingBalances.push(path.balances[path.balances.length - 1]);
+    }
+    var p10 = [], p50 = [], p90 = [];
+    for (var yi = 0; yi < numYears; yi++) {
+      var col = allBalances.map(function (run) { return run[yi]; }).sort(function (x, y2) { return x - y2; });
+      p10.push(percentile(col, 0.10));
+      p50.push(percentile(col, 0.50));
+      p90.push(percentile(col, 0.90));
+    }
+    endingBalances.sort(function (a, b) { return a - b; });
+    return {
+      years: Array.from({ length: numYears }, function (_, i) { return CURRENT_YEAR + i; }),
+      p10: p10, p50: p50, p90: p90,
+      successRate: successes / numSims,
+      medianEnd: percentile(endingBalances, 0.50),
+      p10End: percentile(endingBalances, 0.10),
+      p90End: percentile(endingBalances, 0.90)
+    };
+  }
+
+  // ---------- Tiny canvas chart engine (no external deps) ----------
+  function niceStep(roughStep) {
+    var mag = Math.pow(10, Math.floor(Math.log10(roughStep || 1)));
+    var norm = roughStep / mag;
+    var step;
+    if (norm <= 1) step = 1; else if (norm <= 2) step = 2; else if (norm <= 5) step = 5; else step = 10;
+    return step * mag;
+  }
+  function niceMax(max, ticks) {
+    if (max <= 0) return { max: 1, step: 0.2 };
+    var step = niceStep(max / (ticks || 5));
+    var top = Math.ceil(max / step) * step;
+    return { max: top, step: step };
+  }
+  function setupCanvas(canvas) {
+    var rect = canvas.parentElement.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
+    var w = Math.max(1, rect.width), h = Math.max(1, rect.height);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    var ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx: ctx, w: w, h: h };
+  }
+  function roundRectPath(ctx, x, y, w, h, r) {
+    var rr = Math.min(r, Math.abs(w), Math.abs(h));
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w - (w >= 0 ? rr : -rr), y);
+    ctx.arcTo(x + w, y, x + w, y + (h >= 0 ? rr : -rr), rr);
+    ctx.lineTo(x + w, y + h - (h >= 0 ? rr : -rr));
+    ctx.arcTo(x + w, y + h, x + w - (w >= 0 ? rr : -rr), y + h, rr);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+  }
+
+  function makeLineChart(canvasId, tooltipId) {
+    var canvas = document.getElementById(canvasId);
+    var tooltip = document.getElementById(tooltipId);
+    var cfg = null, geom = null;
+
+    function layout(w, h) {
+      var padL = 58, padR = 12, padT = 10, padB = 26;
+      return { padL: padL, padR: padR, padT: padT, padB: padB, plotW: w - padL - padR, plotH: h - padT - padB };
+    }
+
+    function draw() {
+      if (!cfg) return;
+      var dims = setupCanvas(canvas);
+      var ctx = dims.ctx, w = dims.w, h = dims.h;
+      ctx.clearRect(0, 0, w, h);
+      var L = layout(w, h);
+      var n = cfg.labels.length;
+      if (n < 2) return;
+
+      var allVals = [];
+      cfg.series.forEach(function (s) { s.data.forEach(function (v) { allVals.push(v); }); });
+      if (cfg.bands) { cfg.bands.forEach(function (b) { b.high.forEach(function (v) { allVals.push(v); }); }); }
+      var maxVal = Math.max.apply(null, allVals.concat([0]));
+      var ny = niceMax(maxVal * 1.08, 5);
+      var yMax = ny.max, yStep = ny.step;
+
+      function px(i) { return L.padL + (i / (n - 1)) * L.plotW; }
+      function py(v) { return L.padT + L.plotH - (v / yMax) * L.plotH; }
+
+      ctx.textBaseline = "middle";
+      ctx.font = "11px system-ui, -apple-system, sans-serif";
+      var gridColor = cssVar("--gridline"), mutedColor = cssVar("--text-muted"), baseColor = cssVar("--baseline");
+      for (var v = 0; v <= yMax + 0.0001; v += yStep) {
+        var y = py(v);
+        ctx.strokeStyle = gridColor; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(L.padL, y + 0.5); ctx.lineTo(L.padL + L.plotW, y + 0.5); ctx.stroke();
+        ctx.fillStyle = mutedColor; ctx.textAlign = "right";
+        ctx.fillText(fmtGBPCompact(v), L.padL - 8, y);
+      }
+      ctx.strokeStyle = baseColor; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(L.padL, L.padT + L.plotH + 0.5); ctx.lineTo(L.padL + L.plotW, L.padT + L.plotH + 0.5); ctx.stroke();
+      var xTickEvery = Math.max(1, Math.round(n / 7));
+      ctx.fillStyle = mutedColor; ctx.textAlign = "center"; ctx.textBaseline = "top";
+      for (var i = 0; i < n; i += xTickEvery) {
+        ctx.fillText(cfg.labels[i], px(i), L.padT + L.plotH + 8);
+      }
+      if (n - 1) ctx.fillText(cfg.labels[n - 1], px(n - 1), L.padT + L.plotH + 8);
+
+      if (cfg.fill) {
+        var s0 = cfg.series[0];
+        ctx.beginPath();
+        ctx.moveTo(px(0), py(s0.data[0]));
+        for (var fi = 1; fi < n; fi++) ctx.lineTo(px(fi), py(s0.data[fi]));
+        ctx.lineTo(px(n - 1), py(0)); ctx.lineTo(px(0), py(0)); ctx.closePath();
+        ctx.fillStyle = cssVar(s0.colorVar) + "1f";
+        ctx.fill();
+      }
+
+      if (cfg.bands) {
+        cfg.bands.forEach(function (b) {
+          ctx.beginPath();
+          ctx.moveTo(px(0), py(b.low[0]));
+          for (var bi = 1; bi < n; bi++) ctx.lineTo(px(bi), py(b.low[bi]));
+          for (var bj = n - 1; bj >= 0; bj--) ctx.lineTo(px(bj), py(b.high[bj]));
+          ctx.closePath();
+          ctx.fillStyle = cssVar(b.colorVar) + "2e";
+          ctx.fill();
+        });
+      }
+
+      cfg.series.forEach(function (s) {
+        ctx.strokeStyle = cssVar(s.colorVar);
+        ctx.lineWidth = 2;
+        ctx.lineJoin = "round"; ctx.lineCap = "round";
+        if (s.dash) ctx.setLineDash([5, 4]); else ctx.setLineDash([]);
+        ctx.beginPath();
+        for (var pi = 0; pi < n; pi++) {
+          var xx = px(pi), yy = py(s.data[pi]);
+          if (pi === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      });
+
+      geom = { L: L, n: n, px: px, py: py, w: w, h: h };
+    }
+
+    function onMove(evt) {
+      if (!geom || !cfg) return;
+      var rect = canvas.getBoundingClientRect();
+      var mx = evt.clientX - rect.left;
+      var idx = Math.round(((mx - geom.L.padL) / geom.L.plotW) * (geom.n - 1));
+      idx = Math.max(0, Math.min(geom.n - 1, idx));
+      draw();
+      var ctx = canvas.getContext("2d");
+      var xx = geom.px(idx);
+      ctx.save();
+      ctx.strokeStyle = cssVar("--baseline"); ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(xx, geom.L.padT); ctx.lineTo(xx, geom.L.padT + geom.L.plotH); ctx.stroke();
+      ctx.setLineDash([]);
+      cfg.series.forEach(function (s) {
+        var yy = geom.py(s.data[idx]);
+        ctx.beginPath(); ctx.arc(xx, yy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = cssVar(s.colorVar); ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = cssVar("--surface-1"); ctx.stroke();
+      });
+      ctx.restore();
+
+      var html = '<div class="tt-title">' + cfg.labels[idx] + '</div>';
+      cfg.series.forEach(function (s) {
+        html += '<div class="tt-row"><span class="tt-dot" style="background:' + cssVar(s.colorVar) + '"></span>' + s.label + ': ' + fmtGBP(s.data[idx]) + '</div>';
+      });
+      if (cfg.bands) {
+        cfg.bands.forEach(function (b) {
+          html += '<div class="tt-row"><span class="tt-dot" style="background:' + cssVar(b.colorVar) + '"></span>' + b.label + ': ' + fmtGBP(b.low[idx]) + '–' + fmtGBP(b.high[idx]) + '</div>';
+        });
+      }
+      tooltip.innerHTML = html;
+      var wrapRect = canvas.parentElement.getBoundingClientRect();
+      var left = xx + 14, top = geom.py(cfg.series[0].data[idx]) - 10;
+      if (left + 170 > wrapRect.width) left = xx - 14 - 170;
+      tooltip.style.transform = "translate(" + left + "px," + top + "px)";
+      tooltip.style.opacity = "1";
+    }
+    function onLeave() { tooltip.style.opacity = "0"; draw(); }
+
+    canvas.addEventListener("mousemove", onMove);
+    canvas.addEventListener("mouseleave", onLeave);
+    window.addEventListener("resize", function () { draw(); });
+
+    return { update: function (newCfg) { cfg = newCfg; draw(); } };
+  }
+
+  function makeHBarChart(canvasId, tooltipId) {
+    var canvas = document.getElementById(canvasId);
+    var tooltip = document.getElementById(tooltipId);
+    var cfg = null, geom = null;
+
+    function draw() {
+      if (!cfg) return;
+      var dims = setupCanvas(canvas);
+      var ctx = dims.ctx, w = dims.w, h = dims.h;
+      ctx.clearRect(0, 0, w, h);
+      var n = cfg.labels.length;
+      var padL = 120, padR = 16, padT = 8, padB = 24;
+      var plotW = w - padL - padR, plotH = h - padT - padB;
+      if (n === 0 || plotW <= 0 || plotH <= 0) { geom = null; return; }
+
+      var maxVal = Math.max.apply(null, cfg.data.concat([0]));
+      var ny = niceMax(maxVal * 1.15, 4);
+      var xMax = ny.max, xStep = ny.step;
+      function pxv(v) { return padL + (v / xMax) * plotW; }
+
+      var gridColor = cssVar("--gridline"), mutedColor = cssVar("--text-muted");
+      ctx.font = "11px system-ui, -apple-system, sans-serif";
+      for (var v = 0; v <= xMax + 0.0001; v += xStep) {
+        var x = pxv(v);
+        ctx.strokeStyle = gridColor; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x + 0.5, padT); ctx.lineTo(x + 0.5, padT + plotH); ctx.stroke();
+        ctx.fillStyle = mutedColor; ctx.textAlign = "center"; ctx.textBaseline = "top";
+        ctx.fillText(fmtGBPCompact(v), x, padT + plotH + 6);
+      }
+
+      var rowH = plotH / n;
+      var barH = Math.min(30, rowH * 0.58);
+      var bars = [];
+      for (var i = 0; i < n; i++) {
+        var cy = padT + rowH * i + rowH / 2;
+        var bx = pxv(cfg.data[i]) - padL;
+        ctx.fillStyle = cfg.colors[i];
+        roundRectPath(ctx, padL, cy - barH / 2, bx, barH, 4);
+        ctx.fill();
+        ctx.fillStyle = cssVar("--text-secondary");
+        ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.font = "12px system-ui, -apple-system, sans-serif";
+        var label = cfg.labels[i];
+        ctx.fillText(label.length > 16 ? label.slice(0, 15) + "…" : label, padL - 10, cy);
+        ctx.fillStyle = cssVar("--text-primary");
+        ctx.textAlign = "left";
+        ctx.fillText(fmtGBPCompact(cfg.data[i]), padL + bx + 6, cy);
+        bars.push({ top: cy - rowH / 2, bottom: cy + rowH / 2, x0: padL, x1: padL + bx, cy: cy });
+      }
+      geom = { bars: bars, padL: padL, plotW: plotW, w: w, h: h };
+    }
+
+    function onMove(evt) {
+      if (!geom) return;
+      var rect = canvas.getBoundingClientRect();
+      var my = evt.clientY - rect.top, mx = evt.clientX - rect.left;
+      var idx = -1;
+      for (var i = 0; i < geom.bars.length; i++) { if (my >= geom.bars[i].top && my <= geom.bars[i].bottom) { idx = i; break; } }
+      if (idx === -1 || mx < geom.padL - 8) { tooltip.style.opacity = "0"; return; }
+      var html = '<div class="tt-row"><span class="tt-dot" style="background:' + cfg.colors[idx] + '"></span>' + cfg.labels[idx] + ': ' + fmtGBP(cfg.data[idx]) + '</div>';
+      tooltip.innerHTML = html;
+      var wrapRect = canvas.parentElement.getBoundingClientRect();
+      var left = mx + 14, top = my - 20;
+      if (left + 170 > wrapRect.width) left = mx - 14 - 170;
+      tooltip.style.transform = "translate(" + left + "px," + top + "px)";
+      tooltip.style.opacity = "1";
+    }
+    function onLeave() { tooltip.style.opacity = "0"; }
+
+    canvas.addEventListener("mousemove", onMove);
+    canvas.addEventListener("mouseleave", onLeave);
+    window.addEventListener("resize", function () { draw(); });
+
+    return { update: function (newCfg) { cfg = newCfg; draw(); } };
+  }
+
+  var projectionChart = makeLineChart("projectionChart", "projectionTooltip");
+  var drawdownChart = makeLineChart("drawdownChart", "drawdownTooltip");
+  var budgetChart = makeHBarChart("budgetChart", "budgetTooltip");
+  var mcChart = makeLineChart("mcChart", "mcTooltip");
+
+  function renderLegend(containerId, items) {
+    var el = document.getElementById(containerId);
+    el.innerHTML = "";
+    items.forEach(function (it) {
+      var div = document.createElement("div");
+      div.className = "item";
+      var swatchStyle = it.band
+        ? "background:" + cssVar(it.colorVar) + "2e; border-radius:3px; width:16px; height:12px;"
+        : (it.dash ? "color:" + cssVar(it.colorVar) : "background:" + cssVar(it.colorVar));
+      div.innerHTML = '<span class="swatch' + (it.dash ? ' dash' : '') + '" style="' + swatchStyle + '"></span>' + it.label;
+      el.appendChild(div);
+    });
+  }
+  function fillTable(tableId, rows) {
+    var tbody = document.getElementById(tableId).querySelector("tbody");
+    tbody.innerHTML = "";
+    rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      r.forEach(function (cell) { var td = document.createElement("td"); td.textContent = cell; tr.appendChild(td); });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderProjectionChart(proj) {
+    renderLegend("projectionLegend", [
+      { label: "Household nominal", colorVar: "--series-1" },
+      { label: "Household today's £", colorVar: "--series-3", dash: true }
+    ]);
+    var labels = proj.series.map(function (r) { return String(r.year); });
+    var nominal = proj.series.map(function (r) { return r.a + r.b; });
+    var real = proj.series.map(function (r) { return r.aReal + r.bReal; });
+    projectionChart.update({
+      labels: labels,
+      series: [
+        { label: "Household nominal", colorVar: "--series-1", data: nominal },
+        { label: "Household today's £", colorVar: "--series-3", dash: true, data: real }
+      ]
+    });
+    document.getElementById("projTableHeadA").textContent = "You (age)";
+    document.getElementById("projTableHeadB").textContent = "Spouse (age)";
+    fillTable("projectionTable", proj.series.map(function (r) {
+      return [r.year, r.age.a, r.age.b, fmtGBP(r.a + r.b), fmtGBP(r.aReal + r.bReal)];
+    }));
+  }
+
+  function renderBudgetChart() {
+    var items = state.expenses.filter(function (e) { return e.amount > 0; });
+    var labels = items.map(function (e) { return e.name || "Untitled"; });
+    var values = items.map(function (e) { return e.amount; });
+    var colors = items.map(function (_, i) { return cssVar(EXPENSE_COLORS[i % EXPENSE_COLORS.length]); });
+    budgetChart.update({ labels: labels, data: values, colors: colors });
+    fillTable("budgetTable", items.map(function (e) { return [e.name || "Untitled", fmtGBP(e.amount)]; }));
+  }
+
+  function renderDrawdownChart(dd) {
+    var colorVar = dd.depletedYear ? "--status-critical" : "--series-1";
+    var labels = dd.series.map(function (r) { return String(r.year); });
+    var balances = dd.series.map(function (r) { return r.balance; });
+    drawdownChart.update({
+      labels: labels,
+      series: [{ label: "Household balance", colorVar: colorVar, data: balances }],
+      fill: true
+    });
+    fillTable("drawdownTable", dd.series.map(function (r) {
+      return [r.year, r.age.a, fmtGBP(r.gross.a), fmtGBP(r.tax.a), r.age.b, fmtGBP(r.gross.b), fmtGBP(r.tax.b), fmtGBP(r.net.a + r.net.b), fmtGBP(r.balance)];
+    }));
+  }
+
+  // ---------- Stat tiles ----------
+  function statTile(label, value, cls, foot) {
+    var div = document.createElement("div");
+    div.className = "stat-tile";
+    div.innerHTML = '<div class="label"></div><div class="value"></div>' + (foot ? '<div class="foot"></div>' : "");
+    div.querySelector(".label").textContent = label;
+    var v = div.querySelector(".value");
+    v.textContent = value;
+    if (cls) v.classList.add(cls);
+    if (foot) div.querySelector(".foot").textContent = foot;
+    return div;
+  }
+
+  function renderOverviewStats(proj) {
+    var wrap = document.getElementById("overviewStats");
+    wrap.innerHTML = "";
+    var last = proj.series[proj.series.length - 1];
+    wrap.appendChild(statTile("Household pot at retirement (nominal)", fmtGBP(last.a + last.b), null, "Year " + proj.retireYear));
+    wrap.appendChild(statTile("Household pot at retirement (today's £)", fmtGBP(last.aReal + last.bReal), null, "Adjusted for inflation"));
+    wrap.appendChild(statTile("Your pot / Spouse's pot", fmtGBPCompact(last.a) + " / " + fmtGBPCompact(last.b), null, "At retirement, nominal"));
+    wrap.appendChild(statTile("Household monthly contribution", fmtGBP(effectiveMonthlyContribution("a") + effectiveMonthlyContribution("b")), null, state.useSurplus ? "From budget surplus" : "Manual entry"));
+
+    PEOPLE.forEach(function (p) {
+      var check = annualAllowanceCheck(p);
+      var warnEl = document.getElementById("aaWarning_" + p);
+      var reliefEl = document.getElementById("reliefNote_" + p);
+      if (check.exceeded) {
+        warnEl.style.display = "block";
+        warnEl.textContent = "Estimated gross pension contributions (" + fmtGBP(check.grossAnnual) + "/yr, including tax relief) exceed your estimated annual allowance of " + fmtGBP(check.aa) + " — this could trigger an annual allowance tax charge.";
+      } else {
+        warnEl.style.display = "none";
+      }
+      var person = state.people[p];
+      var extraRelief = check.grossAnnual * Math.max(0, marginalRate(person.annualSalary, state.tax) - 0.20);
+      var msg = "Gross contribution incl. basic-rate relief: " + fmtGBP(check.grossAnnual / 12) + "/mo.";
+      if (extraRelief > 1) msg += " You may be able to reclaim a further ~" + fmtGBP(extraRelief) + "/yr via Self Assessment (higher/additional-rate relief).";
+      reliefEl.textContent = msg;
+    });
+  }
+
+  function renderBudgetStats() {
+    var wrap = document.getElementById("budgetStats");
+    wrap.innerHTML = "";
+    var b = computeBudget();
+    var cls = b.surplus >= 0 ? "good" : "critical";
+    wrap.appendChild(statTile("Household income", fmtGBP(b.householdIncome)));
+    wrap.appendChild(statTile("Household expenses", fmtGBP(b.totalExpenses)));
+    wrap.appendChild(statTile(b.surplus >= 0 ? "Monthly surplus" : "Monthly shortfall", fmtGBP(Math.abs(b.surplus)), cls));
+    var savingsRate = b.householdIncome > 0 ? (Math.max(0, b.surplus) / b.householdIncome * 100) : 0;
+    wrap.appendChild(statTile("Potential savings rate", savingsRate.toFixed(1) + "%", null, "If surplus goes to retirement"));
+  }
+
+  function renderDrawdownStats(dd, startBalances) {
+    var wrap = document.getElementById("drawdownStats");
+    wrap.innerHTML = "";
+    var years = dd.endYear - dd.retireYear;
+    var cls = dd.depletedYear ? "critical" : "good";
+    wrap.appendChild(statTile("Household pot at retirement (after tax-free cash)", fmtGBP((startBalances.a - dd.lumpSum.a) + (startBalances.b - dd.lumpSum.b))));
+    wrap.appendChild(statTile("Tax-free lump sums (You / Spouse)", fmtGBPCompact(dd.lumpSum.a) + " / " + fmtGBPCompact(dd.lumpSum.b), null, "25% of each pot, capped at the lump sum allowance"));
+    wrap.appendChild(statTile("Retirement length", years + " yrs", null, "Year " + dd.retireYear + "–" + dd.endYear));
+    wrap.appendChild(statTile(dd.depletedYear ? "Savings run out" : "Balance at end of plan",
+      dd.depletedYear ? "Year " + dd.depletedYear : fmtGBP(dd.series[dd.series.length - 1].balance), cls));
+
+    var banner = document.getElementById("drawdownBanner");
+    banner.innerHTML = "";
+    var b = document.createElement("div");
+    if (dd.depletedYear) {
+      var margin = dd.endYear - dd.depletedYear;
+      if (margin > 10) {
+        b.className = "banner critical";
+        b.innerHTML = "<div><strong>Savings may run out well before the end of your plan.</strong>At current assumptions, your combined pots are projected to be depleted around " + dd.depletedYear + ", " + margin + " years before your later life expectancy. Consider saving more, retiring later, or planning to spend less net of tax.</div>";
+      } else {
+        b.className = "banner warning";
+        b.innerHTML = "<div><strong>Savings are projected to run tight.</strong>Your combined pots may be depleted around " + dd.depletedYear + ", " + margin + " year(s) before your later life expectancy. A small increase in savings or a lower withdrawal could close the gap.</div>";
+      }
+    } else {
+      b.className = "banner good";
+      b.innerHTML = "<div><strong>On track.</strong>At current assumptions, your combined balance is projected to last through " + dd.endYear + ", ending around " + fmtGBP(dd.series[dd.series.length - 1].balance) + " after UK Income Tax on withdrawals.</div>";
+    }
+    banner.appendChild(b);
+  }
+
+  function renderMonteCarlo(mc, deterministicSeries) {
+    renderLegend("mcLegend", [
+      { label: "Median (Monte Carlo)", colorVar: "--series-1" },
+      { label: "Deterministic estimate", colorVar: "--series-3", dash: true },
+      { label: "10th–90th percentile", colorVar: "--series-1", band: true }
+    ]);
+    var labels = mc.years.map(function (y) { return String(y); });
+    // Align the deterministic (fixed-rate) series onto the same year axis for comparison.
+    var detByYear = {};
+    deterministicSeries.forEach(function (r) { detByYear[r.year] = r.balance; });
+    var detData = mc.years.map(function (y) { return detByYear.hasOwnProperty(y) ? detByYear[y] : null; });
+    // Canvas engine expects numbers; fill any gap (shouldn't normally occur) with the last known value.
+    var lastKnown = 0;
+    detData = detData.map(function (v) { if (v === null) return lastKnown; lastKnown = v; return v; });
+
+    mcChart.update({
+      labels: labels,
+      series: [
+        { label: "Median (Monte Carlo)", colorVar: "--series-1", data: mc.p50 },
+        { label: "Deterministic estimate", colorVar: "--series-3", dash: true, data: detData }
+      ],
+      bands: [{ label: "10th–90th percentile", colorVar: "--series-1", low: mc.p10, high: mc.p90 }]
+    });
+
+    var wrap = document.getElementById("mcStats");
+    wrap.innerHTML = "";
+    var successCls = mc.successRate >= 0.85 ? "good" : (mc.successRate >= 0.6 ? "warning" : "critical");
+    wrap.appendChild(statTile("Didn't run out of money", (mc.successRate * 100).toFixed(0) + "%", successCls, mc.years.length - 1 === 0 ? "" : "Of " + state.numSimulations + " simulated runs"));
+    wrap.appendChild(statTile("Median ending balance", fmtGBP(mc.medianEnd), null, "Year " + mc.years[mc.years.length - 1]));
+    wrap.appendChild(statTile("10th percentile (weak markets)", fmtGBP(mc.p10End)));
+    wrap.appendChild(statTile("90th percentile (strong markets)", fmtGBP(mc.p90End)));
+  }
+
+  // ---------- Render orchestration ----------
+  function renderAll() {
+    PEOPLE.forEach(function (p) { document.getElementById("monthlyContribution_" + p).disabled = state.useSurplus; });
+    if (state.useSurplus) {
+      var half = Math.max(0, computeBudget().surplus) / 2;
+      PEOPLE.forEach(function (p) { document.getElementById("monthlyContribution_" + p).value = half.toFixed(0); });
+    }
+
+    var proj = computeProjection();
+    renderOverviewStats(proj);
+    renderProjectionChart(proj);
+
+    renderBudgetStats();
+    renderBudgetChart();
+
+    var dd = computeDrawdown(proj.endBalances);
+    renderDrawdownStats(dd, proj.endBalances);
+    renderDrawdownChart(dd);
+  }
+
+  function combinedDeterministicSeries(proj, dd) {
+    var combined = [];
+    proj.series.forEach(function (r) { if (r.year < dd.retireYear) combined.push({ year: r.year, balance: r.a + r.b }); });
+    dd.series.forEach(function (r) { combined.push({ year: r.year, balance: r.balance }); });
+    return combined;
+  }
+
+  // ---------- Monte Carlo run ----------
+  var runMcBtn = document.getElementById("runMcBtn");
+  var mcStatusEl = document.getElementById("mcStatus");
+  runMcBtn.addEventListener("click", function () {
+    runMcBtn.disabled = true;
+    mcStatusEl.textContent = "Running " + state.numSimulations + " simulations…";
+    setTimeout(function () {
+      try {
+        var proj = computeProjection();
+        var dd = computeDrawdown(proj.endBalances);
+        var det = combinedDeterministicSeries(proj, dd);
+        var mc = runMonteCarlo(Math.max(50, Math.min(3000, Math.round(state.numSimulations) || 500)));
+        document.getElementById("mcResults").style.display = "block";
+        renderMonteCarlo(mc, det);
+        mcStatusEl.textContent = "Done.";
+      } finally {
+        runMcBtn.disabled = false;
+      }
+    }, 20);
+  });
+
+  // ---------- Save / Load ----------
+  document.getElementById("exportBtn").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "retirement-plan-uk.json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  var importFile = document.getElementById("importFile");
+  document.getElementById("importBtn").addEventListener("click", function () { importFile.click(); });
+  importFile.addEventListener("change", function () {
+    var file = importFile.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        var loaded = JSON.parse(e.target.result);
+        ["returnPre","returnPost","inflation","returnPreVol","returnPostVol","inflationVol","numSimulations","incomeA","incomeB","retirementSpending","useSurplus"].forEach(function (k) {
+          if (loaded.hasOwnProperty(k)) state[k] = loaded[k];
+        });
+        if (loaded.people) {
+          PEOPLE.forEach(function (p) { if (loaded.people[p]) Object.assign(state.people[p], loaded.people[p]); });
+        }
+        if (loaded.expenses) state.expenses = loaded.expenses;
+        if (loaded.tax) Object.assign(state.tax, loaded.tax);
+
+        sharedFields.forEach(function (id) { document.getElementById(id).value = state[id]; });
+        mcFields.forEach(function (id) { document.getElementById(id).value = state[id]; });
+        PEOPLE.forEach(function (p) {
+          personNumberFields.forEach(function (f) { document.getElementById(f + "_" + p).value = state.people[p][f]; });
+          document.getElementById("includeStatePension_" + p).checked = state.people[p].includeStatePension;
+        });
+        Object.keys(taxFieldMap).forEach(function (id) { document.getElementById(id).value = state.tax[taxFieldMap[id]]; });
+        document.getElementById("useMarriageAllowance").checked = state.tax.useMarriageAllowance;
+        useSurplusEl.checked = !!state.useSurplus;
+        renderExpenseRows();
+        renderAll();
+      } catch (err) {
+        alert("Couldn't read that file — make sure it's a plan saved from this app.");
+      }
+    };
+    reader.readAsText(file);
+    importFile.value = "";
+  });
+
+  // ---------- Theme changes ----------
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { renderAll(); });
+  }
+
+  // ---------- Init ----------
+  renderAll();
+})();
+</script>
+</body>
+</html>
