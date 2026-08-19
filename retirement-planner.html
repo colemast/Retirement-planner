@@ -220,6 +220,25 @@
       <div class="hint" id="allocationSavingsHint" style="margin-top:8px;"></div>
     </div>
 
+    <div class="card" id="overridesCard">
+      <h2>Year-by-year overrides (optional)</h2>
+      <div class="hint" style="margin-bottom:10px;">
+        Every year uses the allocation above by default. Add a row here to override the amount saved into each account for a specific calendar year — useful for a bonus, a career break, or ramping contributions up over time. Any year without a row here just uses the default.
+      </div>
+      <div class="table-scroll">
+        <table class="rows" id="overridesTable">
+          <thead><tr>
+            <th>Year</th>
+            <th>You: Pension</th><th>You: ISA</th><th>You: GIA</th>
+            <th>Spouse: Pension</th><th>Spouse: ISA</th><th>Spouse: GIA</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="overridesBody"></tbody>
+        </table>
+      </div>
+      <button class="row-add" id="addOverrideBtn">+ Add override year</button>
+    </div>
+
     <div class="stat-row" id="overviewStats"></div>
 
     <div class="card">
@@ -443,6 +462,7 @@
       a: { pension: 3600, isa: 2400, gia: 0 },
       b: { pension: 2400, isa: 1600, gia: 0 }
     },
+    allocationOverrides: [],
     retirementSpending: 32000,
     tax: {
       personalAllowance: 12570, higherRateThreshold: 50270, additionalRateThreshold: 125140, paTaperStart: 100000,
@@ -805,6 +825,66 @@
 
   renderAllocationTable();
 
+  // ---------- Year-by-year allocation overrides ----------
+  var overridesBody = document.getElementById("overridesBody");
+  function renderOverrideRows() {
+    overridesBody.innerHTML = "";
+    state.allocationOverrides.slice().sort(function (x, y2) { return x.year - y2.year; }).forEach(function (ov) {
+      var tr = document.createElement("tr");
+
+      function numCell(getVal, setVal) {
+        var td = document.createElement("td");
+        var input = document.createElement("input");
+        input.type = "number"; input.step = "50"; input.min = "0";
+        input.value = getVal();
+        input.addEventListener("input", function () { setVal(parseFloat(input.value) || 0); renderAll(); });
+        td.appendChild(input);
+        return td;
+      }
+
+      var tdYear = document.createElement("td");
+      var yearInput = document.createElement("input");
+      yearInput.type = "number"; yearInput.step = "1";
+      yearInput.value = ov.year;
+      yearInput.addEventListener("input", function () { ov.year = parseInt(yearInput.value, 10) || ov.year; renderAll(); });
+      tdYear.appendChild(yearInput);
+      tr.appendChild(tdYear);
+
+      tr.appendChild(numCell(function () { return ov.a.pension; }, function (v) { ov.a.pension = v; }));
+      tr.appendChild(numCell(function () { return ov.a.isa; }, function (v) { ov.a.isa = v; }));
+      tr.appendChild(numCell(function () { return ov.a.gia; }, function (v) { ov.a.gia = v; }));
+      tr.appendChild(numCell(function () { return ov.b.pension; }, function (v) { ov.b.pension = v; }));
+      tr.appendChild(numCell(function () { return ov.b.isa; }, function (v) { ov.b.isa = v; }));
+      tr.appendChild(numCell(function () { return ov.b.gia; }, function (v) { ov.b.gia = v; }));
+
+      var tdRm = document.createElement("td");
+      var rmBtn = document.createElement("button");
+      rmBtn.className = "rm"; rmBtn.textContent = "✕"; rmBtn.title = "Remove override";
+      rmBtn.addEventListener("click", function () {
+        state.allocationOverrides.splice(state.allocationOverrides.indexOf(ov), 1);
+        renderOverrideRows();
+        renderAll();
+      });
+      tdRm.appendChild(rmBtn);
+      tr.appendChild(tdRm);
+
+      overridesBody.appendChild(tr);
+    });
+  }
+  document.getElementById("addOverrideBtn").addEventListener("click", function () {
+    var usedYears = state.allocationOverrides.map(function (o) { return o.year; });
+    var nextYear = CURRENT_YEAR + 1;
+    while (usedYears.indexOf(nextYear) !== -1) nextYear++;
+    state.allocationOverrides.push({
+      year: nextYear,
+      a: { pension: state.allocation.a.pension, isa: state.allocation.a.isa, gia: state.allocation.a.gia },
+      b: { pension: state.allocation.b.pension, isa: state.allocation.b.isa, gia: state.allocation.b.gia }
+    });
+    renderOverrideRows();
+    renderAll();
+  });
+  renderOverrideRows();
+
   // ---------- Expense rows ----------
   var expenseBody = document.getElementById("expenseBody");
   function renderExpenseRows() {
@@ -857,6 +937,23 @@
     return CURRENT_YEAR + Math.max(a.lifeExpectancy - a.currentAge, b.lifeExpectancy - b.currentAge);
   }
 
+  // Amounts to contribute for person p in the year that is y years from now (y=1 is next year).
+  // A row in state.allocationOverrides for that calendar year takes over completely for that
+  // year (even £0, even past the default savings window); otherwise falls back to the default
+  // allocation, gated by retirement age and the chosen number of savings years.
+  function getAllocationForYear(p, y) {
+    var year = CURRENT_YEAR + y;
+    var override = null;
+    for (var i = 0; i < state.allocationOverrides.length; i++) {
+      if (state.allocationOverrides[i].year === year) { override = state.allocationOverrides[i]; break; }
+    }
+    if (override && override[p]) return override[p];
+    var person = state.people[p];
+    var stillSaving = ((person.currentAge + y) <= person.retirementAge) && (y <= state.savingsYears);
+    if (!stillSaving) return { pension: 0, isa: 0, gia: 0 };
+    return state.allocation[p] || { pension: 0, isa: 0, gia: 0 };
+  }
+
   function computeProjection() {
     var retireYear = householdRetirementYear();
     var years = Math.max(0, retireYear - CURRENT_YEAR);
@@ -881,11 +978,10 @@
     for (var y = 1; y <= years; y++) {
       PEOPLE.forEach(function (p) {
         var person = state.people[p];
-        var a = state.allocation[p] || { pension: 0, isa: 0, gia: 0 };
-        var stillSaving = ((person.currentAge + y) <= person.retirementAge) && (y <= state.savingsYears);
-        var monthlyPension = stillSaving ? (a.pension / 0.8) / 12 : 0; // gross up 20% relief-at-source
-        var monthlyIsa = stillSaving ? a.isa / 12 : 0;
-        var monthlyGia = stillSaving ? a.gia / 12 : 0;
+        var a = getAllocationForYear(p, y);
+        var monthlyPension = (a.pension / 0.8) / 12; // gross up 20% relief-at-source
+        var monthlyIsa = a.isa / 12;
+        var monthlyGia = a.gia / 12;
 
         // Annual GIA dividend tax, deducted once per year from the year's opening GIA balance.
         var divIncome = Math.max(0, giaBalances[p]) * (state.giaDividendYield / 100);
@@ -919,7 +1015,12 @@
     var a = state.allocation[p] || { pension: 0 };
     var grossAnnual = a.pension / 0.8;
     var aa = taperedAnnualAllowance(person.annualSalary, t);
-    return { grossAnnual: grossAnnual, aa: aa, exceeded: grossAnnual > aa };
+    var exceededYears = [];
+    if (grossAnnual > aa) exceededYears.push("default");
+    state.allocationOverrides.forEach(function (o) {
+      if (o[p] && (o[p].pension / 0.8) > aa) exceededYears.push(String(o.year));
+    });
+    return { grossAnnual: grossAnnual, aa: aa, exceeded: exceededYears.length > 0, exceededYears: exceededYears };
   }
 
   function computeDrawdown(startBalances) {
@@ -1006,11 +1107,10 @@
         rPre = Math.max(-0.9, rPre);
         PEOPLE.forEach(function (p) {
           var person = state.people[p];
-          var a = state.allocation[p] || { pension: 0, isa: 0, gia: 0 };
-          var stillSaving = ((person.currentAge + y) <= person.retirementAge) && (y <= state.savingsYears);
-          var grossPension = stillSaving ? (a.pension / 0.8) : 0;
-          var grossIsa = stillSaving ? a.isa : 0;
-          var grossGia = stillSaving ? a.gia : 0;
+          var a = getAllocationForYear(p, y);
+          var grossPension = a.pension / 0.8;
+          var grossIsa = a.isa;
+          var grossGia = a.gia;
 
           var divIncome = Math.max(0, pot[p].gia) * (state.giaDividendYield / 100);
           var divTax = dividendTax(divIncome, person.annualSalary + person.otherIncome, t);
@@ -1429,7 +1529,8 @@
       var reliefEl = document.getElementById("reliefNote_" + p);
       if (check.exceeded) {
         warnEl.style.display = "block";
-        warnEl.textContent = "Estimated gross pension contributions (" + fmtGBP(check.grossAnnual) + "/yr, including tax relief) exceed your estimated annual allowance of " + fmtGBP(check.aa) + " — this could trigger an annual allowance tax charge.";
+        var yrsText = check.exceededYears.length <= 4 ? check.exceededYears.join(", ") : check.exceededYears.slice(0, 4).join(", ") + ", …";
+        warnEl.textContent = "Estimated gross pension contributions exceed your estimated annual allowance of " + fmtGBP(check.aa) + " in: " + yrsText + " ('default' = the standard allocation, other entries are override years) — this could trigger an annual allowance tax charge.";
       } else {
         warnEl.style.display = "none";
       }
@@ -1596,6 +1697,7 @@
         if (loaded.allocation) {
           PEOPLE.forEach(function (p) { if (loaded.allocation[p]) Object.assign(state.allocation[p], loaded.allocation[p]); });
         }
+        if (loaded.allocationOverrides) state.allocationOverrides = loaded.allocationOverrides;
         if (loaded.expenses) state.expenses = loaded.expenses;
         if (loaded.tax) Object.assign(state.tax, loaded.tax);
 
@@ -1611,6 +1713,7 @@
         useSurplusEl.checked = !!state.useSurplus;
         renderExpenseRows();
         renderAllocationTable();
+        renderOverrideRows();
         renderAll();
       } catch (err) {
         alert("Couldn't read that file — make sure it's a plan saved from this app.");
