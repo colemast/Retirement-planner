@@ -183,22 +183,53 @@
         <label class="field">Assumed inflation (%)
           <input type="number" id="inflation" min="0" max="15" step="0.1" value="2.8">
         </label>
+        <label class="field">Assumed GIA dividend yield (%/yr of value, taxed annually)
+          <input type="number" id="giaDividendYield" min="0" max="15" step="0.1" value="2">
+        </label>
       </div>
-      <div class="hint" style="margin-top:10px;">Salaries and pension contributions are held flat at today's amounts throughout — a simplifying assumption.</div>
+      <div class="hint" style="margin-top:10px;">Salaries and savings contributions are held flat at today's amounts throughout — a simplifying assumption. Pension, ISA and GIA balances are all assumed to grow at the same rate.</div>
     </div>
 
     <div class="two-col" id="peopleGrid"></div>
 
+    <div class="card" id="allocationCard">
+      <h2>Savings &amp; investment allocation</h2>
+      <div class="grid">
+        <label class="field">Household savings per year (£)
+          <input type="number" id="annualSavingsAmount" min="0" step="500" value="12000">
+        </label>
+        <label class="field">Years saving at this rate
+          <input type="number" id="savingsYears" min="0" step="1" value="30">
+        </label>
+      </div>
+      <div class="hint" style="margin-top:8px;">
+        Auto-allocate splits this between you both, then fills each of your pension (up to your available annual allowance — it gets tax relief), then ISA (up to £20,000/yr each, tax-free growth), then the rest into a GIA (taxable). Edit the table below to override the split.
+      </div>
+      <button id="autoAllocateBtn" style="margin-top:12px;">Auto-allocate</button>
+      <div class="table-scroll" style="margin-top:12px;">
+        <table class="rows" id="allocationTable">
+          <thead><tr><th style="width:40%">Per year</th><th>You (£)</th><th>Spouse (£)</th><th>Total (£)</th></tr></thead>
+          <tbody>
+            <tr><td>Pension (net cost, before tax relief)</td><td><input type="number" id="alloc_pension_a" min="0" step="50"></td><td><input type="number" id="alloc_pension_b" min="0" step="50"></td><td id="alloc_pension_total"></td></tr>
+            <tr><td>ISA</td><td><input type="number" id="alloc_isa_a" min="0" step="50"></td><td><input type="number" id="alloc_isa_b" min="0" step="50"></td><td id="alloc_isa_total"></td></tr>
+            <tr><td>GIA</td><td><input type="number" id="alloc_gia_a" min="0" step="50"></td><td><input type="number" id="alloc_gia_b" min="0" step="50"></td><td id="alloc_gia_total"></td></tr>
+          </tbody>
+          <tfoot><tr style="font-weight:600;"><td>Total</td><td id="alloc_total_a"></td><td id="alloc_total_b"></td><td id="alloc_total_all"></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="hint" id="allocationSavingsHint" style="margin-top:8px;"></div>
+    </div>
+
     <div class="stat-row" id="overviewStats"></div>
 
     <div class="card">
-      <h2>Projected household pension savings</h2>
+      <h2>Projected household savings (pension + ISA + GIA)</h2>
       <div class="chart-legend" id="projectionLegend"></div>
       <div class="chart-wrap">
         <canvas id="projectionChart"></canvas>
         <div class="chart-tooltip" id="projectionTooltip"></div>
       </div>
-      <div class="legend-note">Nominal = future £. Today's £ = adjusted for assumed inflation. Chart runs until the later of your two chosen retirement ages.</div>
+      <div class="legend-note">Nominal = future £. Today's £ = adjusted for assumed inflation. Combines pension, ISA and GIA balances. Chart runs until the later of your two chosen retirement ages.</div>
       <details class="table-toggle"><summary>View as table</summary>
         <div class="table-scroll"><table class="sr-table" id="projectionTable"><thead><tr><th>Year</th><th id="projTableHeadA">You (age)</th><th id="projTableHeadB">Spouse (age)</th><th>Household nominal</th><th>Household today's £</th></tr></thead><tbody></tbody></table></div>
       </details>
@@ -239,7 +270,17 @@
           <label class="field">Marriage Allowance transfer (£)
             <input type="number" id="taxMarriageAmount" min="0" step="10" value="1260">
           </label>
+          <label class="field">ISA annual allowance (£, per person)
+            <input type="number" id="taxISAAllowance" min="0" step="500" value="20000">
+          </label>
+          <label class="field">Capital Gains Tax annual exempt amount (£, per person)
+            <input type="number" id="taxCGTExempt" min="0" step="100" value="3000">
+          </label>
+          <label class="field">Dividend allowance (£, per person)
+            <input type="number" id="taxDividendAllowance" min="0" step="50" value="500">
+          </label>
         </div>
+        <div class="hint" style="margin-top:8px;">Capital Gains Tax (18%/24%) and dividend tax (10.75%/35.75%/39.35%) rates for GIA withdrawals and income are simplified and not separately editable here.</div>
         <label class="checkbox-field" style="margin-top:12px;">
           <input type="checkbox" id="useMarriageAllowance" checked>
           Automatically apply Marriage Allowance when beneficial (transfers £1,260 of Personal Allowance to a basic-rate spouse when the other has little or no income)
@@ -285,7 +326,7 @@
       <h2>Apply this to your plan</h2>
       <label class="checkbox-field">
         <input type="checkbox" id="useSurplus">
-        Split my monthly surplus (income − expenses) 50/50 into each of your pension contributions on the Overview tab
+        Use my monthly surplus (income − expenses) × 12 as my household annual savings amount on the Overview tab
       </label>
     </div>
   </section>
@@ -300,7 +341,7 @@
         </label>
       </div>
       <div class="hint" style="margin-top:10px;">
-        We assume you both start drawing retirement income together from the <strong>later</strong> of your two retirement ages, and plan through to the <strong>later</strong> of your two life expectancies. Each of you takes a 25% tax-free lump sum at that point (up to the pension lump sum allowance); the rest of each pot is drawn down and taxed as income under your own Personal Allowance and bands — split evenly to meet the household target, with Marriage Allowance applied automatically where you've enabled it.
+        We assume you both start drawing retirement income together from the <strong>later</strong> of your two retirement ages, and plan through to the <strong>later</strong> of your two life expectancies. Each of you takes a 25% tax-free lump sum from your pension at that point (up to the pension lump sum allowance). To meet your share of the household target each year, we draw first from your <strong>pension</strong> (taxed as income under your own Personal Allowance and bands, with Marriage Allowance applied automatically where enabled), then — if that's not enough — from your <strong>GIA</strong> (Capital Gains Tax on the gain portion of each withdrawal), then finally your <strong>ISA</strong> (tax-free). Your GIA also pays annual dividend tax on assumed dividend income each year, in and out of retirement.
       </div>
     </div>
 
@@ -316,8 +357,8 @@
       </div>
       <details class="table-toggle"><summary>View as table</summary>
         <div class="table-scroll"><table class="sr-table" id="drawdownTable"><thead><tr>
-          <th>Year</th><th>You (age)</th><th>Your gross w/d</th><th>Your tax</th>
-          <th>Spouse (age)</th><th>Spouse gross w/d</th><th>Spouse tax</th>
+          <th>Year</th><th>You (age)</th><th>Your gross w/d (all pots)</th><th>Your tax (all pots)</th>
+          <th>Spouse (age)</th><th>Spouse gross w/d (all pots)</th><th>Spouse tax (all pots)</th>
           <th>Household net</th><th>Household balance</th>
         </tr></thead><tbody></tbody></table></div>
       </details>
@@ -379,11 +420,11 @@
 
   // ---------- State ----------
   var state = {
-    returnPre: 6.5, returnPost: 4.5, inflation: 2.8,
+    returnPre: 6.5, returnPost: 4.5, inflation: 2.8, giaDividendYield: 2,
     returnPreVol: 12, returnPostVol: 8, inflationVol: 1.5, numSimulations: 500,
     people: {
-      a: { currentAge: 35, retirementAge: 65, statePensionAge: 67, lifeExpectancy: 90, currentSavings: 50000, annualSalary: 42000, monthlyContribution: 300, includeStatePension: true, statePensionAnnual: 12548, otherIncome: 0 },
-      b: { currentAge: 35, retirementAge: 65, statePensionAge: 67, lifeExpectancy: 90, currentSavings: 30000, annualSalary: 30000, monthlyContribution: 200, includeStatePension: true, statePensionAnnual: 12548, otherIncome: 0 }
+      a: { currentAge: 35, retirementAge: 65, statePensionAge: 67, lifeExpectancy: 90, currentSavings: 50000, isaBalance: 15000, giaBalance: 5000, giaCostBasis: 5000, annualSalary: 42000, includeStatePension: true, statePensionAnnual: 12548, otherIncome: 0 },
+      b: { currentAge: 35, retirementAge: 65, statePensionAge: 67, lifeExpectancy: 90, currentSavings: 30000, isaBalance: 8000, giaBalance: 0, giaCostBasis: 0, annualSalary: 30000, includeStatePension: true, statePensionAnnual: 12548, otherIncome: 0 }
     },
     incomeA: 2800, incomeB: 2000,
     expenses: [
@@ -396,11 +437,19 @@
       { name: "Other", amount: 300 }
     ],
     useSurplus: false,
+    annualSavingsAmount: 12000,
+    savingsYears: 30,
+    allocation: {
+      a: { pension: 3600, isa: 2400, gia: 0 },
+      b: { pension: 2400, isa: 1600, gia: 0 }
+    },
     retirementSpending: 32000,
     tax: {
       personalAllowance: 12570, higherRateThreshold: 50270, additionalRateThreshold: 125140, paTaperStart: 100000,
       pensionAnnualAllowance: 60000, aaThresholdIncome: 200000, aaAdjustedIncome: 260000, aaFloor: 10000,
-      lumpSumAllowance: 268275, marriageAllowanceAmount: 1260, useMarriageAllowance: true
+      lumpSumAllowance: 268275, marriageAllowanceAmount: 1260, useMarriageAllowance: true,
+      isaAllowance: 20000, cgtAnnualExempt: 3000, cgtBasicRate: 0.18, cgtHigherRate: 0.24,
+      dividendAllowance: 500, dividendBasicRate: 0.1075, dividendHigherRate: 0.3575, dividendAdditionalRate: 0.3935
     }
   };
 
@@ -478,21 +527,107 @@
     }
     return pa;
   }
-  // One drawdown year for both people, given current pots (mutated), other (non-withdrawal) income,
-  // the household net spending target for the year, and the return rate to apply. Shared by the
-  // deterministic engine and the Monte Carlo engine so the tax logic can never drift between them.
+  // Capital Gains Tax on a realized gain (2-tier: basic/higher), banded on top of the person's
+  // other ordinary taxable income for the year (gains stack above income, per HMRC ordering).
+  function cgtTax(gain, otherIncome, t) {
+    var taxableGain = Math.max(0, gain - t.cgtAnnualExempt);
+    if (taxableGain <= 0) return 0;
+    var pa = taperedPersonalAllowance(otherIncome, t);
+    var otherAbovePA = Math.max(0, otherIncome - pa);
+    var basicBandWidth = Math.max(0, t.higherRateThreshold - pa - otherAbovePA);
+    var atBasic = Math.min(taxableGain, basicBandWidth);
+    var atHigher = taxableGain - atBasic;
+    return atBasic * t.cgtBasicRate + atHigher * t.cgtHigherRate;
+  }
+  // Dividend tax (3-tier), dividends treated as stacking on top of all other taxable income.
+  function dividendTax(divIncome, otherIncome, t) {
+    if (divIncome <= 0) return 0;
+    var pa = taperedPersonalAllowance(otherIncome + divIncome, t);
+    var paLeftForDiv = Math.max(0, pa - Math.min(otherIncome, pa));
+    var divAfterPA = Math.max(0, divIncome - paLeftForDiv);
+    var taxableDiv = Math.max(0, divAfterPA - t.dividendAllowance);
+    if (taxableDiv <= 0) return 0;
+    var otherAbovePA = Math.max(0, otherIncome - pa);
+    var basicBandWidth = Math.max(0, t.higherRateThreshold - pa - otherAbovePA);
+    var higherBandTop = t.additionalRateThreshold - pa;
+    var atBasic = Math.min(taxableDiv, basicBandWidth);
+    var rem = taxableDiv - atBasic;
+    var higherRoom = Math.max(0, higherBandTop - otherAbovePA - atBasic);
+    var atHigher = Math.min(rem, higherRoom);
+    var atAdditional = rem - atHigher;
+    return atBasic * t.dividendBasicRate + atHigher * t.dividendHigherRate + atAdditional * t.dividendAdditionalRate;
+  }
+  // One drawdown year for both people, given current pots (mutated: {pension, isa, gia, giaCostBasis}),
+  // other (non-withdrawal) income, the household net spending target for the year, and the return rate
+  // to apply. Draws first from pension (income tax), then GIA (CGT on the gain portion), then ISA
+  // (tax-free) to meet each person's share of the target. Also deducts annual GIA dividend tax.
+  // Shared by the deterministic engine and the Monte Carlo engine so tax logic can never drift.
   function drawdownYearStep(pot, t, targetNet, otherIncome, returnRate) {
     var pa = marriageAllowancePAs(otherIncome, t);
-    var gross = {}, taxPaid = {}, net = {};
+    var gross = {}, taxPaid = {}, net = {}, detail = {};
     PEOPLE.forEach(function (p) {
-      var maxGross = Math.max(0, pot[p]);
-      var g = solveGrossForNet(otherIncome[p], targetNet / 2, { personalAllowance: pa[p], higherRateThreshold: t.higherRateThreshold, additionalRateThreshold: t.additionalRateThreshold, paTaperStart: t.paTaperStart }, maxGross);
-      var total = otherIncome[p] + g;
-      var tx = ukIncomeTax(total, pa[p], { higherRateThreshold: t.higherRateThreshold, additionalRateThreshold: t.additionalRateThreshold });
-      gross[p] = g; taxPaid[p] = tx; net[p] = total - tx;
-      pot[p] = Math.max(0, pot[p] * (1 + returnRate) - g);
+      var personTax = { personalAllowance: pa[p], higherRateThreshold: t.higherRateThreshold, additionalRateThreshold: t.additionalRateThreshold, paTaperStart: t.paTaperStart };
+      var target = targetNet / 2;
+
+      // Annual dividend tax on the GIA, paid from the GIA balance, before withdrawals.
+      var divIncome = Math.max(0, pot[p].gia) * (state.giaDividendYield / 100);
+      var divTax = dividendTax(divIncome, otherIncome[p], t);
+      pot[p].gia = Math.max(0, pot[p].gia - divTax);
+
+      // 1) Pension — taxed as income.
+      var maxPension = Math.max(0, pot[p].pension);
+      var gPension = solveGrossForNet(otherIncome[p], target, personTax, maxPension);
+      var totalOrdinary = otherIncome[p] + gPension;
+      var taxPension = ukIncomeTax(totalOrdinary, pa[p], personTax);
+      var netAchieved = totalOrdinary - taxPension;
+      var netPension = netAchieved - otherIncome[p];
+      pot[p].pension = Math.max(0, pot[p].pension * (1 + returnRate) - gPension);
+
+      var g = gPension, tx = taxPension, nt = netPension;
+      var shortfall = Math.max(0, target - netAchieved);
+
+      // 2) GIA — CGT on the proportional gain, using proportional cost-basis tracking.
+      var gGia = 0, taxGia = 0, netGia = 0;
+      var giaBalStart = Math.max(0, pot[p].gia);
+      if (shortfall > 0.01 && giaBalStart > 0) {
+        var costBasis = Math.min(pot[p].giaCostBasis || 0, giaBalStart);
+        var gainFraction = Math.max(0, 1 - costBasis / giaBalStart);
+        function netForGia(gw) { return gw - cgtTax(gw * gainFraction, totalOrdinary, t); }
+        if (netForGia(giaBalStart) <= shortfall) {
+          gGia = giaBalStart;
+        } else {
+          var lo = 0, hi = giaBalStart;
+          for (var i = 0; i < 40; i++) {
+            var mid = (lo + hi) / 2;
+            if (netForGia(mid) < shortfall) lo = mid; else hi = mid;
+          }
+          gGia = hi;
+        }
+        taxGia = cgtTax(gGia * gainFraction, totalOrdinary, t);
+        netGia = gGia - taxGia;
+        pot[p].giaCostBasis = Math.max(0, costBasis - gGia * (1 - gainFraction));
+        pot[p].gia = Math.max(0, pot[p].gia * (1 + returnRate) - gGia);
+        g += gGia; tx += taxGia; nt += netGia;
+        shortfall = Math.max(0, shortfall - netGia);
+      } else {
+        pot[p].gia = Math.max(0, pot[p].gia * (1 + returnRate));
+      }
+
+      // 3) ISA — tax-free.
+      var gIsa = 0;
+      var isaBalStart = Math.max(0, pot[p].isa);
+      if (shortfall > 0.01 && isaBalStart > 0) {
+        gIsa = Math.min(shortfall, isaBalStart);
+        pot[p].isa = Math.max(0, pot[p].isa * (1 + returnRate) - gIsa);
+        g += gIsa; nt += gIsa;
+      } else {
+        pot[p].isa = Math.max(0, pot[p].isa * (1 + returnRate));
+      }
+
+      gross[p] = g; taxPaid[p] = tx; net[p] = nt + otherIncome[p];
+      detail[p] = { pension: gPension, gia: gGia, isa: gIsa, divTax: divTax };
     });
-    return { gross: gross, tax: taxPaid, net: net };
+    return { gross: gross, tax: taxPaid, net: net, detail: detail };
   }
   // Box-Muller normal random sample.
   function randomNormal(meanPct, stdevPct) {
@@ -528,8 +663,9 @@
         field("State Pension age", "statePensionAge_" + p, "number") +
         field("Life expectancy", "lifeExpectancy_" + p, "number") +
         field("Current pension pot (£)", "currentSavings_" + p, "number") +
+        field("Current ISA balance (£)", "isaBalance_" + p, "number") +
+        field("Current GIA balance (£)", "giaBalance_" + p, "number") +
         field("Gross annual salary (£)", "annualSalary_" + p, "number") +
-        field("Monthly pension contribution (£, from take-home pay)", "monthlyContribution_" + p, "number") +
         field("Other retirement income (£/yr, today's £)", "otherIncome_" + p, "number") +
       '</div>' +
       '<label class="checkbox-field" style="margin-top:10px;"><input type="checkbox" id="includeStatePension_' + p + '" checked> Include State Pension from State Pension age</label>' +
@@ -545,19 +681,23 @@
   }
 
   // ---------- Inputs wiring ----------
-  var sharedFields = ["returnPre", "returnPost", "inflation", "incomeA", "incomeB", "retirementSpending"];
+  var sharedFields = ["returnPre", "returnPost", "inflation", "giaDividendYield", "incomeA", "incomeB", "retirementSpending"];
   sharedFields.forEach(function (id) {
     var el = document.getElementById(id);
     el.value = state[id];
     el.addEventListener("input", function () { state[id] = parseFloat(el.value) || 0; renderAll(); });
   });
 
-  var personNumberFields = ["currentAge","retirementAge","statePensionAge","lifeExpectancy","currentSavings","annualSalary","monthlyContribution","otherIncome","statePensionAnnual"];
+  var personNumberFields = ["currentAge","retirementAge","statePensionAge","lifeExpectancy","currentSavings","isaBalance","giaBalance","annualSalary","otherIncome","statePensionAnnual"];
   PEOPLE.forEach(function (p) {
     personNumberFields.forEach(function (f) {
       var el = document.getElementById(f + "_" + p);
       el.value = state.people[p][f];
       el.addEventListener("input", function () { state.people[p][f] = parseFloat(el.value) || 0; renderAll(); });
+    });
+    // Editing today's GIA balance resets the assumed cost basis to match it (no pre-existing embedded gain).
+    document.getElementById("giaBalance_" + p).addEventListener("input", function () {
+      state.people[p].giaCostBasis = state.people[p].giaBalance;
     });
     var chk = document.getElementById("includeStatePension_" + p);
     chk.checked = state.people[p].includeStatePension;
@@ -567,7 +707,8 @@
   var taxFieldMap = {
     taxPA: "personalAllowance", taxHigherThreshold: "higherRateThreshold", taxAdditionalThreshold: "additionalRateThreshold",
     taxPATaperStart: "paTaperStart", taxAA: "pensionAnnualAllowance", taxAAThresholdIncome: "aaThresholdIncome",
-    taxAAAdjustedIncome: "aaAdjustedIncome", taxAAFloor: "aaFloor", taxLSA: "lumpSumAllowance", taxMarriageAmount: "marriageAllowanceAmount"
+    taxAAAdjustedIncome: "aaAdjustedIncome", taxAAFloor: "aaFloor", taxLSA: "lumpSumAllowance", taxMarriageAmount: "marriageAllowanceAmount",
+    taxISAAllowance: "isaAllowance", taxCGTExempt: "cgtAnnualExempt", taxDividendAllowance: "dividendAllowance"
   };
   Object.keys(taxFieldMap).forEach(function (id) {
     var el = document.getElementById(id);
@@ -588,9 +729,81 @@
   var useSurplusEl = document.getElementById("useSurplus");
   useSurplusEl.addEventListener("change", function () {
     state.useSurplus = useSurplusEl.checked;
-    PEOPLE.forEach(function (p) { document.getElementById("monthlyContribution_" + p).disabled = state.useSurplus; });
+    document.getElementById("annualSavingsAmount").disabled = state.useSurplus;
     renderAll();
   });
+
+  // ---------- Savings amount / allocation wiring ----------
+  var savingsFields = ["annualSavingsAmount", "savingsYears"];
+  savingsFields.forEach(function (id) {
+    var el = document.getElementById(id);
+    el.value = state[id];
+    el.addEventListener("input", function () { state[id] = parseFloat(el.value) || 0; renderAllocationTable(); renderAll(); });
+  });
+
+  function computeAutoAllocation() {
+    var t = state.tax;
+    var perPersonBudget = Math.max(0, state.annualSavingsAmount) / 2;
+    var alloc = {};
+    PEOPLE.forEach(function (p) {
+      var person = state.people[p];
+      var budget = perPersonBudget;
+      var aa = taperedAnnualAllowance(person.annualSalary, t);
+      var netCostForFullAA = aa * 0.8;
+      var pension = Math.min(budget, netCostForFullAA);
+      budget -= pension;
+      var isa = Math.min(budget, t.isaAllowance);
+      budget -= isa;
+      var gia = Math.max(0, budget);
+      alloc[p] = { pension: pension, isa: isa, gia: gia };
+    });
+    return alloc;
+  }
+
+  function renderAllocationTable() {
+    ["pension", "isa", "gia"].forEach(function (k) {
+      var total = 0;
+      PEOPLE.forEach(function (p) {
+        var el = document.getElementById("alloc_" + k + "_" + p);
+        el.value = Math.round(state.allocation[p][k]);
+        total += state.allocation[p][k];
+      });
+      document.getElementById("alloc_" + k + "_total").textContent = fmtGBP(total);
+    });
+    var totalA = state.allocation.a.pension + state.allocation.a.isa + state.allocation.a.gia;
+    var totalB = state.allocation.b.pension + state.allocation.b.isa + state.allocation.b.gia;
+    document.getElementById("alloc_total_a").textContent = fmtGBP(totalA);
+    document.getElementById("alloc_total_b").textContent = fmtGBP(totalB);
+    document.getElementById("alloc_total_all").textContent = fmtGBP(totalA + totalB);
+    var hintEl = document.getElementById("allocationSavingsHint");
+    var diff = (totalA + totalB) - state.annualSavingsAmount;
+    if (Math.abs(diff) < 1) {
+      hintEl.textContent = "Matches your household savings target of " + fmtGBP(state.annualSavingsAmount) + "/yr.";
+    } else if (diff > 0) {
+      hintEl.textContent = "This allocates " + fmtGBP(diff) + "/yr more than your " + fmtGBP(state.annualSavingsAmount) + " target — that's fine, it just means you've edited beyond the auto-suggestion.";
+    } else {
+      hintEl.textContent = "This allocates " + fmtGBP(-diff) + "/yr less than your " + fmtGBP(state.annualSavingsAmount) + " target.";
+    }
+  }
+
+  ["pension", "isa", "gia"].forEach(function (k) {
+    PEOPLE.forEach(function (p) {
+      var el = document.getElementById("alloc_" + k + "_" + p);
+      el.addEventListener("input", function () {
+        state.allocation[p][k] = parseFloat(el.value) || 0;
+        renderAllocationTable();
+        renderAll();
+      });
+    });
+  });
+
+  document.getElementById("autoAllocateBtn").addEventListener("click", function () {
+    state.allocation = computeAutoAllocation();
+    renderAllocationTable();
+    renderAll();
+  });
+
+  renderAllocationTable();
 
   // ---------- Expense rows ----------
   var expenseBody = document.getElementById("expenseBody");
@@ -635,11 +848,6 @@
     var surplus = householdIncome - totalExpenses;
     return { totalExpenses: totalExpenses, householdIncome: householdIncome, surplus: surplus };
   }
-  function effectiveMonthlyContribution(p) {
-    if (state.useSurplus) return Math.max(0, computeBudget().surplus) / 2;
-    return state.people[p].monthlyContribution;
-  }
-
   function householdRetirementYear() {
     var a = state.people.a, b = state.people.b;
     return CURRENT_YEAR + Math.max(a.retirementAge - a.currentAge, b.retirementAge - b.currentAge);
@@ -652,37 +860,64 @@
   function computeProjection() {
     var retireYear = householdRetirementYear();
     var years = Math.max(0, retireYear - CURRENT_YEAR);
-    var balances = { a: state.people.a.currentSavings, b: state.people.b.currentSavings };
+    var t = state.tax;
+    var balances = {}, isaBalances = {}, giaBalances = {}, giaCostBasis = {};
+    PEOPLE.forEach(function (p) {
+      balances[p] = state.people[p].currentSavings;
+      isaBalances[p] = state.people[p].isaBalance;
+      giaBalances[p] = state.people[p].giaBalance;
+      giaCostBasis[p] = state.people[p].giaCostBasis !== undefined ? state.people[p].giaCostBasis : state.people[p].giaBalance;
+    });
     var monthlyReturn = (state.returnPre / 100) / 12;
     var series = [];
     var row0 = { year: CURRENT_YEAR };
-    PEOPLE.forEach(function (p) { row0[p] = balances[p]; row0[p + "Real"] = balances[p]; row0.age = row0.age || {}; row0.age[p] = state.people[p].currentAge; });
+    PEOPLE.forEach(function (p) {
+      row0[p] = balances[p] + isaBalances[p] + giaBalances[p];
+      row0[p + "Real"] = row0[p];
+      row0.age = row0.age || {}; row0.age[p] = state.people[p].currentAge;
+    });
     series.push(row0);
 
     for (var y = 1; y <= years; y++) {
       PEOPLE.forEach(function (p) {
         var person = state.people[p];
-        var stillAccumulating = (person.currentAge + y) <= person.retirementAge;
-        var monthlyContrib = stillAccumulating ? effectiveMonthlyContribution(p) / 0.8 : 0; // gross up 20% relief-at-source
+        var a = state.allocation[p] || { pension: 0, isa: 0, gia: 0 };
+        var stillSaving = ((person.currentAge + y) <= person.retirementAge) && (y <= state.savingsYears);
+        var monthlyPension = stillSaving ? (a.pension / 0.8) / 12 : 0; // gross up 20% relief-at-source
+        var monthlyIsa = stillSaving ? a.isa / 12 : 0;
+        var monthlyGia = stillSaving ? a.gia / 12 : 0;
+
+        // Annual GIA dividend tax, deducted once per year from the year's opening GIA balance.
+        var divIncome = Math.max(0, giaBalances[p]) * (state.giaDividendYield / 100);
+        var divTax = dividendTax(divIncome, person.annualSalary + person.otherIncome, t);
+        giaBalances[p] = Math.max(0, giaBalances[p] - divTax);
+
         for (var m = 0; m < 12; m++) {
-          balances[p] = balances[p] * (1 + monthlyReturn) + monthlyContrib;
+          balances[p] = balances[p] * (1 + monthlyReturn) + monthlyPension;
+          isaBalances[p] = isaBalances[p] * (1 + monthlyReturn) + monthlyIsa;
+          giaBalances[p] = giaBalances[p] * (1 + monthlyReturn) + monthlyGia;
         }
+        giaCostBasis[p] += monthlyGia * 12;
       });
       var row = { year: CURRENT_YEAR + y, age: {} };
       PEOPLE.forEach(function (p) {
-        row[p] = balances[p];
-        row[p + "Real"] = balances[p] / Math.pow(1 + state.inflation / 100, y);
+        var total = balances[p] + isaBalances[p] + giaBalances[p];
+        row[p] = total;
+        row[p + "Real"] = total / Math.pow(1 + state.inflation / 100, y);
         row.age[p] = state.people[p].currentAge + y;
       });
       series.push(row);
     }
-    return { series: series, endBalances: balances, retireYear: retireYear };
+    var endBalances = {};
+    PEOPLE.forEach(function (p) { endBalances[p] = { pension: balances[p], isa: isaBalances[p], gia: giaBalances[p], giaCostBasis: giaCostBasis[p] }; });
+    return { series: series, endBalances: endBalances, retireYear: retireYear };
   }
 
   function annualAllowanceCheck(p) {
     var person = state.people[p];
     var t = state.tax;
-    var grossAnnual = (effectiveMonthlyContribution(p) / 0.8) * 12;
+    var a = state.allocation[p] || { pension: 0 };
+    var grossAnnual = a.pension / 0.8;
     var aa = taperedAnnualAllowance(person.annualSalary, t);
     return { grossAnnual: grossAnnual, aa: aa, exceeded: grossAnnual > aa };
   }
@@ -693,20 +928,22 @@
     var endYear = householdEndYear();
     var years = Math.max(0, endYear - retireYear);
 
-    // Apply 25% tax-free lump sum at household retirement start
+    // Apply 25% tax-free lump sum from each pension pot at household retirement start
     var pot = {}, lumpSum = {};
     PEOPLE.forEach(function (p) {
-      var full = startBalances[p];
-      var ls = Math.min(full * 0.25, t.lumpSumAllowance);
+      var sb = startBalances[p];
+      var ls = Math.min(sb.pension * 0.25, t.lumpSumAllowance);
       lumpSum[p] = ls;
-      pot[p] = full - ls;
+      pot[p] = { pension: sb.pension - ls, isa: sb.isa, gia: sb.gia, giaCostBasis: sb.giaCostBasis };
     });
+
+    function potTotal() { return PEOPLE.reduce(function (s, p) { return s + pot[p].pension + pot[p].isa + pot[p].gia; }, 0); }
 
     var series = [];
     var householdTarget = state.retirementSpending;
-    var householdBalance = pot.a + pot.b;
+    var householdBalance = potTotal();
     var depletedYear = null;
-    var row0 = { year: retireYear, age: {}, pot: { a: pot.a, b: pot.b }, gross: { a: 0, b: 0 }, tax: { a: 0, b: 0 }, net: { a: 0, b: 0 }, target: householdTarget, balance: householdBalance };
+    var row0 = { year: retireYear, age: {}, gross: { a: 0, b: 0 }, tax: { a: 0, b: 0 }, net: { a: 0, b: 0 }, target: householdTarget, balance: householdBalance };
     PEOPLE.forEach(function (p) { row0.age[p] = state.people[p].currentAge + (retireYear - CURRENT_YEAR); });
     series.push(row0);
 
@@ -726,10 +963,10 @@
 
       var step = drawdownYearStep(pot, t, targetNet, otherIncome, state.returnPost / 100);
 
-      householdBalance = pot.a + pot.b;
+      householdBalance = potTotal();
       if (householdBalance <= 0.5 && depletedYear === null) depletedYear = retireYear + y;
 
-      var row = { year: retireYear + y, age: {}, pot: { a: pot.a, b: pot.b }, gross: step.gross, tax: step.tax, net: step.net, target: targetNet, balance: householdBalance };
+      var row = { year: retireYear + y, age: {}, gross: step.gross, tax: step.tax, net: step.net, target: targetNet, balance: householdBalance };
       PEOPLE.forEach(function (p) { row.age[p] = state.people[p].currentAge + yearsFromNow; });
       series.push(row);
     }
@@ -744,9 +981,18 @@
     var t = state.tax;
     var retireYear = householdRetirementYear();
     var endYear = householdEndYear();
-    var pot = { a: state.people.a.currentSavings, b: state.people.b.currentSavings };
+    var pot = {};
+    PEOPLE.forEach(function (p) {
+      pot[p] = {
+        pension: state.people[p].currentSavings,
+        isa: state.people[p].isaBalance,
+        gia: state.people[p].giaBalance,
+        giaCostBasis: state.people[p].giaCostBasis !== undefined ? state.people[p].giaCostBasis : state.people[p].giaBalance
+      };
+    });
+    function potTotal() { return PEOPLE.reduce(function (s, p) { return s + pot[p].pension + pot[p].isa + pot[p].gia; }, 0); }
     var cumInfl = 1;
-    var balances = [pot.a + pot.b];
+    var balances = [potTotal()];
     var survived = true;
 
     for (var y = 1; y <= (endYear - CURRENT_YEAR); y++) {
@@ -760,14 +1006,25 @@
         rPre = Math.max(-0.9, rPre);
         PEOPLE.forEach(function (p) {
           var person = state.people[p];
-          var stillAccumulating = (person.currentAge + y) <= person.retirementAge;
-          var grossAnnual = stillAccumulating ? (effectiveMonthlyContribution(p) / 0.8) * 12 : 0;
-          pot[p] = pot[p] * (1 + rPre) + grossAnnual;
+          var a = state.allocation[p] || { pension: 0, isa: 0, gia: 0 };
+          var stillSaving = ((person.currentAge + y) <= person.retirementAge) && (y <= state.savingsYears);
+          var grossPension = stillSaving ? (a.pension / 0.8) : 0;
+          var grossIsa = stillSaving ? a.isa : 0;
+          var grossGia = stillSaving ? a.gia : 0;
+
+          var divIncome = Math.max(0, pot[p].gia) * (state.giaDividendYield / 100);
+          var divTax = dividendTax(divIncome, person.annualSalary + person.otherIncome, t);
+          pot[p].gia = Math.max(0, pot[p].gia - divTax);
+
+          pot[p].pension = pot[p].pension * (1 + rPre) + grossPension;
+          pot[p].isa = pot[p].isa * (1 + rPre) + grossIsa;
+          pot[p].gia = pot[p].gia * (1 + rPre) + grossGia;
+          pot[p].giaCostBasis += grossGia;
         });
         if (year === retireYear) {
           PEOPLE.forEach(function (p) {
-            var ls = Math.min(pot[p] * 0.25, t.lumpSumAllowance);
-            pot[p] -= ls;
+            var ls = Math.min(pot[p].pension * 0.25, t.lumpSumAllowance);
+            pot[p].pension -= ls;
           });
         }
       } else {
@@ -783,9 +1040,9 @@
           otherIncome[p] = sp + other;
         });
         drawdownYearStep(pot, t, targetNet, otherIncome, rPost);
-        if ((pot.a + pot.b) <= 0.5) survived = false;
+        if (potTotal() <= 0.5) survived = false;
       }
-      balances.push(pot.a + pot.b);
+      balances.push(potTotal());
     }
     return { balances: balances, survived: survived };
   }
@@ -1163,8 +1420,8 @@
     var last = proj.series[proj.series.length - 1];
     wrap.appendChild(statTile("Household pot at retirement (nominal)", fmtGBP(last.a + last.b), null, "Year " + proj.retireYear));
     wrap.appendChild(statTile("Household pot at retirement (today's £)", fmtGBP(last.aReal + last.bReal), null, "Adjusted for inflation"));
-    wrap.appendChild(statTile("Your pot / Spouse's pot", fmtGBPCompact(last.a) + " / " + fmtGBPCompact(last.b), null, "At retirement, nominal"));
-    wrap.appendChild(statTile("Household monthly contribution", fmtGBP(effectiveMonthlyContribution("a") + effectiveMonthlyContribution("b")), null, state.useSurplus ? "From budget surplus" : "Manual entry"));
+    wrap.appendChild(statTile("Your pot / Spouse's pot", fmtGBPCompact(last.a) + " / " + fmtGBPCompact(last.b), null, "At retirement, nominal, all accounts"));
+    wrap.appendChild(statTile("Household annual savings", fmtGBP(state.annualSavingsAmount), null, state.useSurplus ? "From budget surplus" : "Manual entry, allocated below"));
 
     PEOPLE.forEach(function (p) {
       var check = annualAllowanceCheck(p);
@@ -1201,8 +1458,11 @@
     wrap.innerHTML = "";
     var years = dd.endYear - dd.retireYear;
     var cls = dd.depletedYear ? "critical" : "good";
-    wrap.appendChild(statTile("Household pot at retirement (after tax-free cash)", fmtGBP((startBalances.a - dd.lumpSum.a) + (startBalances.b - dd.lumpSum.b))));
-    wrap.appendChild(statTile("Tax-free lump sums (You / Spouse)", fmtGBPCompact(dd.lumpSum.a) + " / " + fmtGBPCompact(dd.lumpSum.b), null, "25% of each pot, capped at the lump sum allowance"));
+    var potAtRetirement = PEOPLE.reduce(function (s, p) {
+      return s + (startBalances[p].pension - dd.lumpSum[p]) + startBalances[p].isa + startBalances[p].gia;
+    }, 0);
+    wrap.appendChild(statTile("Household pot at retirement (after tax-free cash)", fmtGBP(potAtRetirement)));
+    wrap.appendChild(statTile("Tax-free lump sums (You / Spouse)", fmtGBPCompact(dd.lumpSum.a) + " / " + fmtGBPCompact(dd.lumpSum.b), null, "25% of each pension pot, capped at the lump sum allowance"));
     wrap.appendChild(statTile("Retirement length", years + " yrs", null, "Year " + dd.retireYear + "–" + dd.endYear));
     wrap.appendChild(statTile(dd.depletedYear ? "Savings run out" : "Balance at end of plan",
       dd.depletedYear ? "Year " + dd.depletedYear : fmtGBP(dd.series[dd.series.length - 1].balance), cls));
@@ -1261,10 +1521,11 @@
 
   // ---------- Render orchestration ----------
   function renderAll() {
-    PEOPLE.forEach(function (p) { document.getElementById("monthlyContribution_" + p).disabled = state.useSurplus; });
+    document.getElementById("annualSavingsAmount").disabled = state.useSurplus;
     if (state.useSurplus) {
-      var half = Math.max(0, computeBudget().surplus) / 2;
-      PEOPLE.forEach(function (p) { document.getElementById("monthlyContribution_" + p).value = half.toFixed(0); });
+      var annual = Math.max(0, computeBudget().surplus) * 12;
+      state.annualSavingsAmount = annual;
+      document.getElementById("annualSavingsAmount").value = annual.toFixed(0);
     }
 
     var proj = computeProjection();
@@ -1326,16 +1587,20 @@
     reader.onload = function (e) {
       try {
         var loaded = JSON.parse(e.target.result);
-        ["returnPre","returnPost","inflation","returnPreVol","returnPostVol","inflationVol","numSimulations","incomeA","incomeB","retirementSpending","useSurplus"].forEach(function (k) {
+        ["returnPre","returnPost","inflation","giaDividendYield","returnPreVol","returnPostVol","inflationVol","numSimulations","incomeA","incomeB","retirementSpending","useSurplus","annualSavingsAmount","savingsYears"].forEach(function (k) {
           if (loaded.hasOwnProperty(k)) state[k] = loaded[k];
         });
         if (loaded.people) {
           PEOPLE.forEach(function (p) { if (loaded.people[p]) Object.assign(state.people[p], loaded.people[p]); });
         }
+        if (loaded.allocation) {
+          PEOPLE.forEach(function (p) { if (loaded.allocation[p]) Object.assign(state.allocation[p], loaded.allocation[p]); });
+        }
         if (loaded.expenses) state.expenses = loaded.expenses;
         if (loaded.tax) Object.assign(state.tax, loaded.tax);
 
         sharedFields.forEach(function (id) { document.getElementById(id).value = state[id]; });
+        savingsFields.forEach(function (id) { document.getElementById(id).value = state[id]; });
         mcFields.forEach(function (id) { document.getElementById(id).value = state[id]; });
         PEOPLE.forEach(function (p) {
           personNumberFields.forEach(function (f) { document.getElementById(f + "_" + p).value = state.people[p][f]; });
@@ -1345,6 +1610,7 @@
         document.getElementById("useMarriageAllowance").checked = state.tax.useMarriageAllowance;
         useSurplusEl.checked = !!state.useSurplus;
         renderExpenseRows();
+        renderAllocationTable();
         renderAll();
       } catch (err) {
         alert("Couldn't read that file — make sure it's a plan saved from this app.");
